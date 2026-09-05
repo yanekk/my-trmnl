@@ -13,11 +13,11 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T02 implemented, awaiting review. Pure core (model, assemble, refresh) in; suite
-green (39 tests) via `docker compose run --rm --build test`. T00 still the only hand-verified
-task.
+**Status:** T02 reviewed clean, no fix. Pure core (model, assemble, refresh) done; suite green
+(39 tests) via `docker compose run --rm --build test`. T00 still the only hand-verified task.
+Next is T03 (renderer) or T04/T05/T06/T07, all with deps met.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** review T02.
+**Next `pir-work` will:** implement the next ⬜ with deps met — T03 (renderer) by task number.
 
 ## Tasks
 
@@ -28,7 +28,7 @@ done · ⛔ blocked, needs a human.
 |---|---|---|---|---|
 | T00 | Spike: static image on the device | — | ✅ | Hand-verified with owner 2026-09-05: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted; contract corrections in FINDINGS. |
 | T01 | Skeleton, Docker, boundary guard test | T00 | ✅ | Reviewed; guard now also catches `datetime.utcnow()`. Residual aliased-datetime / pathlib-I/O gaps in FINDINGS, left by design. |
-| T02 | Pure core: assemble + refresh policy | T01 | 🔍 | model/assemble/refresh + 24 tests (39 total). Two deviations from task interface, kept in commit msg: `Event.start` is a required tz-aware datetime not `datetime\|None` (all-day needs a date to bucket; local-midnight, `all_day` only gates the label); `HourPoint` carries tz-aware `time` not `hour:int` so all UTC→Warsaw conversion stays in core. |
+| T02 | Pure core: assemble + refresh policy | T01 | ✅ | Reviewed clean, no fix. Walked all 10 checklist tests and §2.6 paths; both recorded deviations (required tz-aware `Event.start`; `HourPoint.time`) pull UTC→Warsaw conversion into the core, correct per §3.1. Probed `>= now` filters, DST bucketing, empty-vs-failed regions, weather rest-of-today, `round()` phrasing (benign). Suite green (39). |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
 | T04 | BYOS HTTP server | T01, T02 | ⬜ | Off critical path. Cold start serves the bundled placeholder (no image yet), never 404. |
 | T05 | Weather adapter (Open-Meteo) | T02 | ⬜ | |
@@ -37,7 +37,7 @@ done · ⛔ blocked, needs a human.
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** T02
+**Review queue:** empty
 
 ## Blocked on the user
 
