@@ -33,6 +33,8 @@ class Config:
     calendar_ids: list[str]
     service_start: time; service_end: time      # Europe/Warsaw, drive refresh policy
     image_path: str
+    place: str                                   # weather heading suffix, e.g. "Gdańsk"
+    stops_label: str                             # buses heading suffix, e.g. "Hynka"
 
 def build_once(config, now, clients) -> BuildResult   # fetch → assemble → render → publish
 def run_loop(config, clock, clients) -> None          # build_once on a cadence
@@ -48,6 +50,11 @@ def run_loop(config, clock, clients) -> None          # build_once on a cadence
   succeeds (cold start / just after a reboot), the device is served the "Uruchamianie…"
   placeholder rather than a 404 (DESIGN §2.6). `build_once`'s first success replaces it.
 - Config is validated on load with clear errors (missing calendar id, bad coordinate).
+- Region headings carry the config location and line (DESIGN §7, 2026-09-05 T03 decision):
+  "Pogoda · {place}", "Odjazdy · {stops_label} · {line}", "Kalendarz". `build_once` passes these
+  to the renderer (T03 draws plain titles when none are given, so add a labels argument to
+  `render` rather than reaching config into the pure core). For this deployment: Gdańsk / Hynka /
+  227. Casing follows T03's uppercase tracked label style unless the owner asks otherwise.
 
 ## Tests
 
@@ -57,6 +64,8 @@ def run_loop(config, clock, clients) -> None          # build_once on a cadence
 - [ ] A rendering failure keeps the previous image (last-good) and logs, does not crash the loop.
 - [ ] Before the first successful `build_once`, the served image is the startup placeholder.
 - [ ] Config load rejects a missing/invalid field with a clear message.
+- [ ] The published image's headings show "Pogoda · {place}" and "Odjazdy · {stops_label} · {line}"
+      from config (a golden or a render-labels assertion).
 - [ ] The loop calls `build_once` repeatedly using the injected clock (no real sleep in tests).
 
 ## Done when

@@ -344,6 +344,13 @@ Google account settings; the calendar region then shows "unavailable" until re-a
   Calendar with no events for a day → "Brak wydarzeń"; bus list with no departures → "brak
   odjazdów". The owner chose this over leaving the space blank, because a blank region reads as
   a fault or a stuck load. It is distinct from "niedostępne", which means the source is down.
+- **2026-09-05 (T03) — Region headings carry the location and line from config.** The weather
+  heading is "Pogoda · {city}", the buses heading "Odjazdy · {stop label} · {line}"; the calendar
+  heading stays "Kalendarz". For this deployment the values are Gdańsk / Hynka / 227. City, stop
+  label and line are config, so the renderer (T03) draws the plain titles when no labels are
+  passed and T08 supplies the suffixed ones from config — this keeps the core (assemble) free of
+  config and T03's goldens valid. On-screen casing follows the existing uppercase tracked label
+  style (e.g. "ODJAZDY · HYNKA · 227") unless the owner asks for title case.
 - **2026-09-05 (plan review) — A bundled "Uruchamianie…" startup placeholder for the cold
   start.** On first start or just after a reboot no image exists yet and there is no last-good
   to fall back on. The owner chose shipping a fixed "starting up" image the server serves
