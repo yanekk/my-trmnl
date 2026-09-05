@@ -19,6 +19,8 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-05 | 📌 | T05 weather adapter is coordinate-agnostic (lat/lon are args); Gdańsk city-centre default is fine, owner confirms the exact point at T08 config. Requests `timezone=GMT` (times UTC, core localizes) and pins metric units. Null hourly precip→0%; null temp→`Failure`. |
+| 2026-09-05 | 📌 | `docker compose run --rm test` reuses a stale baked image (Dockerfile `COPY`s source at build). New source/test files need `docker compose build test` first, or the `-v "$PWD":/app` mount. Suite read 69 until rebuild, then 83. |
 | 2026-09-05 | 📌 | T04 returns `filename` as a content hash of the served BMP, so an unchanged screen keeps its name and the firmware can skip a redundant full-screen flash. The name is ours (device fetches our `image_url`; `.bmp` route serves the one image). Flash-skip unverified on hardware — check at T09. |
 | 2026-09-05 | 📌 | T03 renderer goldens are generated and compared inside Docker: `docker compose run --rm -v "$PWD":/app -e REGEN_GOLDENS=1 test`. FreeType hinting makes pixels exact only within the same Pillow/FreeType build, so regen in the env tests run in. Bundled IBM Plex OFL fonts live in trmnl/render/fonts/. |
 | 2026-09-05 | 📌 | T01 boundary guard is a name-based static AST scan. Review added `utcnow` to the clock check. Residual gaps by design: aliased `from datetime import datetime as dt; dt.now()`, and file I/O via `pathlib`/`os` (only `open()` builtin caught). Catches accidental reaches, not adversarial. |

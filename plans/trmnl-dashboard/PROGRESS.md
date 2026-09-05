@@ -13,13 +13,13 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T04 reviewed clean, no fix commit. BYOS server on stdlib `http.server` (no framework
-dep); socket-free `App.handle` synthetic-tested plus one real-socket integration test. Probed
-past the doc: shared `App` is stateless so threads are safe; the `.bmp` route ignores the path
-(no traversal); reads self-heal past an atomic rename. Suite green (69). T00 still the only
-hand-verified task; T05 (weather adapter) is next.
+**Status:** T05 implemented, awaiting review. Weather adapter fetches Open-Meteo, returns
+`WeatherData | Failure`, never raises. Coordinate-agnostic (lat/lon args); `now` accepted but
+unused (core trims). Requests UTC times + pinned metric units; null hourly precip→0%, null temp
+→Failure. 14 tests off a recorded fixture, no network. Suite green (83) after a Docker rebuild.
+T00 still the only hand-verified task; T06 (bus) is next.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** implement T05 (weather adapter, Open-Meteo).
+**Next `pir-work` will:** review T05 (weather adapter).
 
 ## Tasks
 
@@ -33,13 +33,13 @@ done · ⛔ blocked, needs a human.
 | T02 | Pure core: assemble + refresh policy | T01 | ✅ | Reviewed clean; both deviations pull UTC→Warsaw into the core, correct per §3.1. |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ✅ | Reviewed. Five goldens eyeballed correct (populated, weather-down, empty-bus, empty-cal, startup); empty distinct from niedostępne; weekday map verified (2026-09-05=sb). Fixed: documented regen command lacked the `-v "$PWD":/app` mount, silently discarding regen (6492dfd). Plain titles owner-approved (§7); T08 adds a labels hook to `render()`. 53 green. |
 | T04 | BYOS HTTP server | T01, T02 | ✅ | Reviewed clean, no fix commit. All 8 acceptance tests defend real behaviour (60/1800 refresh, content-hash filename, cold-start placeholder, 204 on bad body). Probed past doc: stateless `App` so threads safe; `.bmp` route ignores path (no traversal); atomic-rename reads self-heal; firmware sends no query string (T00 evidence). Flash-skip still unverified on device (T09). 69 green. |
-| T05 | Weather adapter (Open-Meteo) | T02 | ⬜ | |
+| T05 | Weather adapter (Open-Meteo) | T02 | 🔍 | Open-Meteo → `WeatherData | Failure`, never raises. `now` in signature but unused (core trims/localizes; adapter returns full UTC series). Requests `timezone=GMT` + explicit metric units; `forecast_days=2` to cover today either side of a UTC boundary. Null hourly precip→0%, null temp→Failure. 14 tests, recorded fixture, no network. |
 | T06 | Bus adapter (ckan2 departures) | T02 | ⬜ | |
 | T07 | Google Calendar adapter (OAuth) | T02 | ⬜ | Needs owner's Google account for one-time consent. Start early. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** empty
+**Review queue:** T05
 
 ## Blocked on the user
 
