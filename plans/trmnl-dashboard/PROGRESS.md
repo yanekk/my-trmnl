@@ -13,11 +13,11 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T01 reviewed and done. Skeleton, Docker and the boundary guard are in; suite green
-(15 tests) via `docker compose run --rm --build test`. T02 (pure core) is next. T00 still the
-only hand-verified task.
+**Status:** T02 implemented, awaiting review. Pure core (model, assemble, refresh) in; suite
+green (39 tests) via `docker compose run --rm --build test`. T00 still the only hand-verified
+task.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** implement T02 (pure core: assemble + refresh policy).
+**Next `pir-work` will:** review T02.
 
 ## Tasks
 
@@ -27,8 +27,8 @@ done · ⛔ blocked, needs a human.
 | # | Task | Depends on | State | Notes |
 |---|---|---|---|---|
 | T00 | Spike: static image on the device | — | ✅ | Hand-verified with owner 2026-09-05: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted; contract corrections in FINDINGS. |
-| T01 | Skeleton, Docker, boundary guard test | T00 | ✅ | Reviewed; one fix: guard missed `datetime.utcnow()` (a wall-clock read) — added it, 15 tests green. Acceptance all met: docker test exits 0, quiet, no ANSI; four packages + guard present, proven to bite by synthetic bad sources (also forbids `open()`, DESIGN §3.1). Probed guard evasions; residual aliased-datetime / pathlib-I/O gaps logged in FINDINGS, left by design. |
-| T02 | Pure core: assemble + refresh policy | T01 | ⬜ | |
+| T01 | Skeleton, Docker, boundary guard test | T00 | ✅ | Reviewed; guard now also catches `datetime.utcnow()`. Residual aliased-datetime / pathlib-I/O gaps in FINDINGS, left by design. |
+| T02 | Pure core: assemble + refresh policy | T01 | 🔍 | model/assemble/refresh + 24 tests (39 total). Two deviations from task interface, kept in commit msg: `Event.start` is a required tz-aware datetime not `datetime\|None` (all-day needs a date to bucket; local-midnight, `all_day` only gates the label); `HourPoint` carries tz-aware `time` not `hour:int` so all UTC→Warsaw conversion stays in core. |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
 | T04 | BYOS HTTP server | T01, T02 | ⬜ | Off critical path. Cold start serves the bundled placeholder (no image yet), never 404. |
 | T05 | Weather adapter (Open-Meteo) | T02 | ⬜ | |
@@ -37,7 +37,7 @@ done · ⛔ blocked, needs a human.
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** empty
+**Review queue:** T02
 
 ## Blocked on the user
 
