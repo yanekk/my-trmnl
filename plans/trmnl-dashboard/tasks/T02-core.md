@@ -74,7 +74,10 @@ derived from `now`; today drops events already past.
 - [ ] Each source independently `Failure` → its `Region.available == False`, others unaffected.
 - [ ] All three `Failure` → three unavailable regions, still a valid `Dashboard`.
 - [ ] `refresh_seconds`: inside service hours → 60; outside → 1800; tested at both edges.
-- [ ] Empty bus list (no departures) is not a failure — region available, list empty.
+- [ ] Empty bus list (no departures) is not a failure — region available, list empty (the
+      renderer draws "brak odjazdów"; DESIGN §2.6).
+- [ ] A calendar day with no events is not a failure — region available, that day's list empty
+      (the renderer draws "Brak wydarzeń"; DESIGN §2.4). Distinct from calendar `Failure`.
 - [ ] `attribution` is always populated.
 
 ## Done when

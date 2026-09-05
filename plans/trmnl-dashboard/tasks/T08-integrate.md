@@ -44,6 +44,9 @@ def run_loop(config, clock, clients) -> None          # build_once on a cadence
   always whole. If rendering itself fails, the last-good image is kept and the failure logged.
 - The loop's cadence is independent of the device; the device gets its own `refresh_rate` from
   the server. Fetch frequency here is at least as often as the fastest device refresh.
+- The server is wired to T03's committed startup placeholder so that, before `build_once` first
+  succeeds (cold start / just after a reboot), the device is served the "Uruchamianie…"
+  placeholder rather than a 404 (DESIGN §2.6). `build_once`'s first success replaces it.
 - Config is validated on load with clear errors (missing calendar id, bad coordinate).
 
 ## Tests
@@ -52,6 +55,7 @@ def run_loop(config, clock, clients) -> None          # build_once on a cadence
 - [ ] One source failing (e.g. bus timeout) still publishes; that region is marked unavailable.
 - [ ] All three sources failing still publishes a valid image with three unavailable regions.
 - [ ] A rendering failure keeps the previous image (last-good) and logs, does not crash the loop.
+- [ ] Before the first successful `build_once`, the served image is the startup placeholder.
 - [ ] Config load rejects a missing/invalid field with a clear message.
 - [ ] The loop calls `build_once` repeatedly using the injected clock (no real sleep in tests).
 

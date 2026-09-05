@@ -45,6 +45,13 @@ time, metric units. Layout, top to bottom: weather top-left, buses top-right, ca
 the bottom. The approved mock in `prototype/mock.html` is the non-binding reference for
 proportion and density; the real renderer is designed fresh against it, not copied from it.
 
+There is deliberately no top bar carrying a clock, a date or a "last updated" time (§7). The
+screen only redraws when the device wakes, so a clock would freeze between wakes — accurate to
+the minute during the day but up to ~30 minutes behind overnight — and a wall clock that can
+read wrong is worse than none. The mock's top strip is therefore not built. The accepted cost
+is that nothing on screen states the time, so a server outage (device holding its last image)
+looks the same as a live screen; the device still self-heals when the server returns (§6).
+
 1-bit is not a limitation we tolerate but the physical truth of the panel: it is a
 full-refresh black/white e-ink screen with no grey. Any shading is done by dithering (hatched
 fills), never by a grey value, because a grey value does not exist on this hardware.
@@ -91,6 +98,11 @@ hours. The refresh token is stored only on the home box. Which calendar(s) to re
 "Today" and "tomorrow" are computed in Europe/Warsaw from the current time passed into the
 core, so the buckets roll over at local midnight regardless of where the code runs.
 
+A day with no events — nothing left today, or nothing tomorrow — shows a short "Brak wydarzeń"
+line in that day's column, not a blank space, so a genuinely empty day does not read as a
+loading failure or a fault (§7). This is distinct from the calendar source being down, which
+shows "niedostępne" (§2.6).
+
 ### 2.5 Refresh cadence
 
 The server tells the device how long to sleep before the next wake, as `refresh_rate` seconds
@@ -118,8 +130,16 @@ so it is decided in the core and tested without a clock.
 - **The server cannot build an image at all.** The device keeps showing the last image it drew
   (e-ink persists with no power), and the server logs the failure. The next successful cycle
   replaces it. We never push a blank or error-only screen when a last-good image exists.
+- **The server has never built an image yet** (first start, or just after a box reboot). Until
+  the first real image exists there is no last-good image to fall back on, so the server serves
+  a bundled "Uruchamianie…" (starting up) placeholder — an 800×480 1-bit BMP shipped with the
+  code — so the device is never handed a 404 or a blank. Once the first real image is built the
+  placeholder is never shown again (§7). This differs from the bullet above: that keeps the
+  last-good image, this covers there being none.
 - **The live bus feed returns empty or 404 for a stop.** Treated as "no upcoming departures"
-  for that stop, not as an error; the region still renders with whatever other stop has.
+  for that stop, not as an error; the region still renders with whatever other stop has. When
+  every stop is empty — no departures at all for the line — the bus region shows a short "brak
+  odjazdów" line, still available, not "niedostępne" (§7): empty is not the same as down.
 - **Two refreshes overlap.** The image is written to a temporary file and atomically renamed
   over the served path, so the device never fetches a half-written image.
 - **The device sends odd headers.** Header names vary by case and separator across firmware
@@ -188,7 +208,9 @@ task-level decision (T08); either way the image is built by the same path.
 ### 3.5 Storage
 
 Little persistent state. The generated image lives at a fixed served path, written to a temp
-file and renamed over it so a fetch never sees a partial write. The Google OAuth refresh token
+file and renamed over it so a fetch never sees a partial write. A bundled "Uruchamianie…"
+placeholder BMP ships with the code (read-only, committed) and is served only until the first
+real image exists (§2.6). The Google OAuth refresh token
 is stored on the home box (file permissions restricted); it is the one secret and it never
 leaves the box. Config (location, stop ids, line, calendar id, service hours) is a file on the
 box. Stop-id lookups from `stops.json` are cached to avoid re-downloading daily data every
@@ -311,6 +333,22 @@ Google account settings; the calendar region then shows "unavailable" until re-a
 - **2026-09-05 — Live departures JSON endpoint, not GTFS-RT.** For one stop and one line the
   `departures` endpoint already fuses schedule and realtime with human-readable fields; GTFS-RT
   would add protobuf and a static-GTFS join for no gain at this scope.
+- **2026-09-05 (plan review) — No top bar: no on-screen clock, date or "last updated" time.**
+  The mock had a top strip with all three; the owner dropped it. The screen only redraws on a
+  device wake, so a clock freezes between wakes — to the minute during the day, up to ~30 min
+  overnight — and a time that can read wrong is worse than none. The accepted consequence is
+  that nothing on screen dates the data, so a server outage looks like a live screen; the device
+  still self-heals (§6). If ever wanted, a small "akt. HH:MM" could sit in the attribution
+  footer without reviving the strip.
+- **2026-09-05 (plan review) — An available-but-empty region shows a short line, not a blank.**
+  Calendar with no events for a day → "Brak wydarzeń"; bus list with no departures → "brak
+  odjazdów". The owner chose this over leaving the space blank, because a blank region reads as
+  a fault or a stuck load. It is distinct from "niedostępne", which means the source is down.
+- **2026-09-05 (plan review) — A bundled "Uruchamianie…" startup placeholder for the cold
+  start.** On first start or just after a reboot no image exists yet and there is no last-good
+  to fall back on. The owner chose shipping a fixed "starting up" image the server serves
+  instantly over making the device wait a refresh cycle for its first picture. It is shown only
+  until the first real image is built, then never again.
 
 ---
 

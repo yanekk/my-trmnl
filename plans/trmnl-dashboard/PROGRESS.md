@@ -10,14 +10,15 @@ touching the task you pick up, and append yours there.
 for the next session; the account is the commit message. Whoever writes a cell also fixes the
 over-budget cell they walk past.
 
-**Plan reviewed:** not yet — run `/pir-review-plan trmnl-dashboard` before the first `/pir-work`
+**Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
+(no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** Plan just written by the planning session. Requirements, a device/architecture
-research pass, and an owner-approved visual mock are all done. Nothing built yet. The plan must
-be read back by a fresh session before any task starts.
+**Status:** Plan written, then read back by a fresh session. Documents agree, the machine and the
+three live data sources match the plan, and nothing is being rebuilt (empty repo). Nothing built
+yet. Ready for the first `/pir-work`.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** nothing yet — it refuses to build until the plan is reviewed. After
-review, the first task is T00 (the spike), which has no dependencies.
+**Next `pir-work` will:** implement T00 (the spike) — no dependencies. It needs the physical
+device and the owner's hands; raise the handover and wait.
 
 ## Tasks
 
@@ -29,8 +30,8 @@ done · ⛔ blocked, needs a human.
 | T00 | Spike: static image on the device | — | ⬜ | Throwaway. Needs the physical device + owner's hands. Gates image format and BYOS contract. |
 | T01 | Skeleton, Docker, boundary guard test | T00 | ⬜ | |
 | T02 | Pure core: assemble + refresh policy | T01 | ⬜ | |
-| T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. |
-| T04 | BYOS HTTP server | T01, T02 | ⬜ | Off critical path. |
+| T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
+| T04 | BYOS HTTP server | T01, T02 | ⬜ | Off critical path. Cold start serves the bundled placeholder (no image yet), never 404. |
 | T05 | Weather adapter (Open-Meteo) | T02 | ⬜ | |
 | T06 | Bus adapter (ckan2 departures) | T02 | ⬜ | |
 | T07 | Google Calendar adapter (OAuth) | T02 | ⬜ | Needs owner's Google account for one-time consent. Start early. |

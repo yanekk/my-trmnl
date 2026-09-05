@@ -36,7 +36,11 @@ GET  /<image>.bmp  -> the current image bytes, or the last-good image if a rebui
   clock (it is on the world-facing side) and passes it in.
 - `image_url` is built from the request host so it resolves on the LAN.
 - The server binds to the LAN interface, not the public internet (DESIGN §5.2).
-- If no fresh image exists yet, serve the last-good one; never 404 the image to the device.
+- Image fallback order, so the device is never handed a 404 or a blank: serve the current image
+  if one exists; else the last-good image if a rebuild failed; else, on cold start when no image
+  has ever been built, the bundled "Uruchamianie…" startup placeholder (DESIGN §2.6, §3.5). The
+  placeholder is supplied to the server as a path (wired to T03's committed asset in T08), so
+  T04 can be built and tested against a fixture placeholder before T03 lands.
 
 ## Tests
 
@@ -46,6 +50,7 @@ GET  /<image>.bmp  -> the current image bytes, or the last-good image if a rebui
 - [ ] A request missing optional telemetry headers still succeeds (only `ID` required).
 - [ ] `/api/log` returns 204 and never errors, even on a malformed body.
 - [ ] The image route serves the last-good image when the current build is marked failed.
+- [ ] Cold start (no image ever built) serves the startup placeholder, not a 404 or a blank.
 - [ ] `image_url` host matches the request host (resolves on the LAN, not a hardcoded address).
 
 ## Done when
