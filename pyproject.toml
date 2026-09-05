@@ -25,6 +25,12 @@ test = [
 [tool.setuptools.packages.find]
 include = ["trmnl*"]
 
+# The renderer loads these at runtime via __file__ paths (DESIGN §3.1, T03), so
+# they must ship with the package even on a non-editable install: the bundled
+# IBM Plex fonts, their OFL licence, and the cold-start placeholder BMP.
+[tool.setuptools.package-data]
+"trmnl.render" = ["fonts/*.ttf", "fonts/*.txt", "startup.bmp"]
+
 [tool.pytest.ini_options]
 # Put the repo root on sys.path so `import trmnl` works whether or not the
 # package was installed (Docker installs it; a bare `pytest` locally still works).

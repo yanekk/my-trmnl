@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-05 | 📌 | T03 renderer goldens are generated and compared inside Docker: `docker compose run --rm -v "$PWD":/app -e REGEN_GOLDENS=1 test`. FreeType hinting makes pixels exact only within the same Pillow/FreeType build, so regen in the env tests run in. Bundled IBM Plex OFL fonts live in trmnl/render/fonts/. |
 | 2026-09-05 | 📌 | T01 boundary guard is a name-based static AST scan. Review added `utcnow` to the clock check. Residual gaps by design: aliased `from datetime import datetime as dt; dt.now()`, and file I/O via `pathlib`/`os` (only `open()` builtin caught). Catches accidental reaches, not adversarial. |
 | 2026-09-05 | ✅ | T00 spike verified by hand with owner: real TRMNL (FW 1.5.12, model `xiao_epaper_display`, MAC `E0:72:A1:FA:0D:F8`) fetched and displayed our 800×480 1-bit BMP3 from the LAN server. Biggest risk retired. |
 | 2026-09-05 | 📌 | FW 1.5.12 GETs `/api/setup/` with a trailing slash. Spike matched only `/api/setup` → device got 404 (it logged "Code - 404"), then continued to `/api/display` and displayed anyway. T04 must serve `/api/setup/` returning `api_key`; a setup miss is non-fatal but noisy. |
