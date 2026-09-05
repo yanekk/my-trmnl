@@ -4,7 +4,12 @@ comparing to committed reference PNGs instead of a person's eye.
 
 Regenerating the goldens (only when the layout genuinely changes):
 
-    docker compose run --rm -e REGEN_GOLDENS=1 test
+    docker compose run --rm -v "$PWD":/app -e REGEN_GOLDENS=1 test
+
+The `-v "$PWD":/app` bind mount is not optional: the compose service copies the
+source in at build time and has no mount of its own, so without it the rewritten
+goldens land inside the ephemeral container and `--rm` throws them away — the
+host files never change and the regen silently does nothing.
 
 That rewrites every golden from the current renderer, so run it deliberately and
 eyeball the results. Goldens must be generated in the same environment the tests
@@ -117,7 +122,7 @@ def _assert_golden(img: Image.Image, name: str):
         return
     assert os.path.exists(path), (
         f"golden {name}.png missing — regenerate with "
-        f"`docker compose run --rm -e REGEN_GOLDENS=1 test`"
+        f'`docker compose run --rm -v "$PWD":/app -e REGEN_GOLDENS=1 test`'
     )
     golden = Image.open(path)
     assert (img.mode, img.size) == (golden.mode, golden.size)
