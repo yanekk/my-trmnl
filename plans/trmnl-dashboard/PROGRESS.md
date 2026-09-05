@@ -13,12 +13,13 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T07 implemented, awaiting review. Calendar adapter built; its automated half is
-green but the OAuth consent (owner's Google account + Cloud project) is unverified — the
-hand-verification half, see "Blocked on the user". All three leaf adapters now exist; T08
-integration unblocks once T07 is reviewed. T00 still the only hand-verified task. 135 green.
+**Status:** T07 reviewed clean. All three leaf adapters (weather, bus, calendar) done and
+reviewed; T00 and T07-OAuth hand-verified. 135 green. T08 (composition root, refresh loop,
+config, degradation) is unblocked and next. Owner decision pending for T08: multi-day all-day
+events currently vanish from today/tomorrow (see FINDINGS); untitled-event wording "(bez tytułu)"
+to confirm.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** review T07 (Google Calendar adapter).
+**Next `pir-work` will:** implement T08 (composition root, refresh loop, config, degradation).
 
 ## Tasks
 
@@ -32,13 +33,13 @@ done · ⛔ blocked, needs a human.
 | T02 | Pure core: assemble + refresh policy | T01 | ✅ | Reviewed clean; both deviations pull UTC→Warsaw into the core, correct per §3.1. |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ✅ | Reviewed clean. Five goldens eyeballed; empty distinct from niedostępne. Golden regen must mount `-v "$PWD":/app` (see FINDINGS). T08 adds a labels hook to `render()`. |
 | T04 | BYOS HTTP server | T01, T02 | ✅ | Reviewed clean. Stateless `App`, content-hash filename, cold-start placeholder, 204 on bad body, `.bmp` route ignores path. Flash-skip unverified on device (T09). |
-| T05 | Weather adapter (Open-Meteo) | T02 | ✅ | Reviewed. Code clean. Probed the tz contract: `.replace(tzinfo=utc)` is safe only because the request pins `timezone=GMT`; core keeps hourly points where `time>now` and Warsaw-date==today, so null-precip→0% far-horizon hours never leak in; `forecast_days=2` genuinely needed at the UTC-day boundary. Fix: request test asserted units but not `timezone`/`forecast_days` — a silent-mislabel gap; added those assertions (5a31177). 83 green. |
+| T05 | Weather adapter (Open-Meteo) | T02 | ✅ | Reviewed clean; fix 5a31177 added `timezone`/`forecast_days` request assertions. tz contract probed (safe only because request pins `timezone=GMT`). |
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean, no fix commit. All 9 test items defend real behaviour; empty-vs-down and per-pole isolation genuinely tested (dead pole → others render; all-fail → Failure). Probed: Py3.12 parses `Z` (else all poles fail); a malformed 227 row drops its whole pole; serial poles 10s each. Stale-image trap hit, 111 green with mount. |
-| T07 | Google Calendar adapter (OAuth) | T02 | 🔍 | Built calendar.py (fetch_events over Google REST via httpx) + google_auth.py (read-only scope, load/refresh, 0o600 token store, one-time consent). 24 tests. Deviations: httpx not the discovery client; all-day→Warsaw midnight per model; untitled→"(bez tytułu)" placeholder (owner confirm); calendar is one source (any cal error→region Failure). Added google-auth deps; rebuild image. OAuth consent verified by owner 2026-09-05 (FINDINGS); calendar id captured for T08. |
+| T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean, no fix commit. Probed: no clock read (uses `now` arg), token never in log/reason, per-calendar merge atomic (any error→region Failure), all-day→Warsaw midnight matches model. Deviations sound. OAuth consent hand-verified by owner 2026-09-05. Gap logged: multi-day all-day events vanish (core/model, T08 owner decision). |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** T07
+**Review queue:** (empty)
 
 ## Blocked on the user
 

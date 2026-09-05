@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-05 | 📌 | T07 review clean. Gap: a multi-day all-day event whose start.date is before today (ongoing vacation) buckets to its start day and vanishes from today/tomorrow. Event carries no `end`; fix is core/model or adapter per-day emit. Owner decision, affects T08. |
 | 2026-09-05 | ✅ | T07 OAuth consent done by owner: read-only credential minted, loads, valid, reads live events end to end. Token 0o600 at ~/.config/trmnl/token.json (dev Mac, outside repo; copy to box at T09). Dashboard calendar id: pd0pfl6q60afma9et1o2n46f1c@group.calendar.google.com (Madziojankowy kalendarz). |
 | 2026-09-05 | 📌 | T07 calendar adapter fetches Google Calendar REST over httpx (Bearer token), not the discovery client. New deps google-auth 2.35.0 + google-auth-oauthlib 1.2.1 — rebuild the image. Calendar is one source: any calendar error → whole-region Failure (no per-pole-style isolation). |
 | 2026-09-05 | 📌 | T07: all-day events placed at Warsaw local midnight (core buckets by day). Untitled event → "(bez tytułu)" placeholder — user-visible, owner to confirm wording. OAuth token stored 0o600, never logged (both asserted). Consent flow itself is owner-run, unverified. |
