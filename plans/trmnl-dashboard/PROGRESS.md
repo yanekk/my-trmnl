@@ -13,12 +13,11 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T00 done — verified by hand with the owner: the real TRMNL displayed our image from
-the LAN server. Contract corrections captured in FINDINGS (trailing-slash `/api/setup/`, real
-header names) for T04. Nothing else built yet.
+**Status:** T01 implemented, awaiting review. Skeleton, Docker and the boundary guard are in;
+suite is green (13 tests) both via `docker compose run --rm test` and a local 3.13 venv. T00
+still the only hand-verified task.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** implement T01 (skeleton, Docker, boundary guard test) — its only
-dependency T00 is ✅.
+**Next `pir-work` will:** review T01.
 
 ## Tasks
 
@@ -28,7 +27,7 @@ done · ⛔ blocked, needs a human.
 | # | Task | Depends on | State | Notes |
 |---|---|---|---|---|
 | T00 | Spike: static image on the device | — | ✅ | Verified by hand with owner: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted. Contract corrections in FINDINGS for T04. Evidence was on-device hand-verification, not a code review. |
-| T01 | Skeleton, Docker, boundary guard test | T00 | ⬜ | |
+| T01 | Skeleton, Docker, boundary guard test | T00 | 🔍 | Built trmnl/{core,adapters,render,server}, pyproject (Pillow/httpx/pytest pinned), Dockerfile+compose `test`, README, .gitignore, boundary guard + smoke test. 13 tests green via `docker compose run --rm test` (exit 0, no ANSI) and a local 3.13 venv. Guard also forbids `open()` (DESIGN §3.1) beyond the task's example tuple; proven to bite by synthetic bad sources, not by breaking a real module. |
 | T02 | Pure core: assemble + refresh policy | T01 | ⬜ | |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
 | T04 | BYOS HTTP server | T01, T02 | ⬜ | Off critical path. Cold start serves the bundled placeholder (no image yet), never 404. |
@@ -38,7 +37,7 @@ done · ⛔ blocked, needs a human.
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** *(empty)*
+**Review queue:** T01
 
 ## Blocked on the user
 

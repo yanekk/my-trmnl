@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trmnl-dashboard"
+version = "0.1.0"
+description = "E-ink dashboard server for a Seeed Studio TRMNL device."
+readme = "README.md"
+requires-python = ">=3.12"
+
+# Runtime deps are pinned so the dev Mac and the deploy box run the same code,
+# which matters most for Pillow (the renderer is golden-tested at T03; a Pillow
+# version bump can shift a pixel). httpx is the HTTP client for the adapters.
+dependencies = [
+    "Pillow==11.0.0",
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==8.3.4",
+]
+
+[tool.setuptools.packages.find]
+include = ["trmnl*"]
+
+[tool.pytest.ini_options]
+# Put the repo root on sys.path so `import trmnl` works whether or not the
+# package was installed (Docker installs it; a bare `pytest` locally still works).
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,0 +1,5 @@
+# The canonical test runner: `docker compose run --rm test` (DESIGN SS5).
+services:
+  test:
+    build: .
+    command: python -m pytest -q --color=no
