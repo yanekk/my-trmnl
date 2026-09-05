@@ -13,12 +13,12 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T00 spike built and smoke-tested locally; on-device display is unverified and needs
-the owner + the physical device. Handover raised; session waiting on the owner's report.
+**Status:** T00 done — verified by hand with the owner: the real TRMNL displayed our image from
+the LAN server. Contract corrections captured in FINDINGS (trailing-slash `/api/setup/`, real
+header names) for T04. Nothing else built yet.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** finish T00 once the owner confirms — record the device's request/headers
-in FINDINGS.md, delete `spike/`, mark T00 ✅. If it did not display, debug from the server log.
-Then T01.
+**Next `pir-work` will:** implement T01 (skeleton, Docker, boundary guard test) — its only
+dependency T00 is ✅.
 
 ## Tasks
 
@@ -27,7 +27,7 @@ done · ⛔ blocked, needs a human.
 
 | # | Task | Depends on | State | Notes |
 |---|---|---|---|---|
-| T00 | Spike: static image on the device | — | 🟡 | Built: stdlib BYOS server + 800×480 1-bit BMP3, 4 endpoints smoke-tested locally, headers logged. On-device display UNVERIFIED — needs owner + device. Findings + spike/ removal pending that. |
+| T00 | Spike: static image on the device | — | ✅ | Verified by hand with owner: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted. Contract corrections in FINDINGS for T04. Evidence was on-device hand-verification, not a code review. |
 | T01 | Skeleton, Docker, boundary guard test | T00 | ⬜ | |
 | T02 | Pure core: assemble + refresh policy | T01 | ⬜ | |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
@@ -42,7 +42,7 @@ done · ⛔ blocked, needs a human.
 
 ## Blocked on the user
 
-Nothing right now. Two things will need the owner during the build, flagged so they are not a
-surprise: T00 and T09 need the physical device on home wifi and the captive-portal setup; T07
+Nothing right now. T00 is done (device verified on home wifi). Two things still need the owner
+later: T09 needs the physical device again for on-device verification of the real dashboard; T07
 needs a one-time Google sign-in and a Google Cloud project. Config values (stops, line,
 coordinates, calendar id) are collected during T05/T06/T07/T09.
