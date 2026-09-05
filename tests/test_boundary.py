@@ -89,10 +89,17 @@ def check_source(source: str, filename: str = "<string>") -> list[str]:
                 continue
             segs = dotted.split(".")
             last = segs[-1]
-            # datetime.now(), datetime.datetime.now(), date.today(), ... : any
-            # .now/.today call whose chain names datetime or date is a clock read,
-            # regardless of how datetime was imported/aliased.
-            if last in ("now", "today") and any(
+            # datetime.now() / .today() / .utcnow(), date.today(), ...: a
+            # .now/.today/.utcnow call whose chain still names datetime or date
+            # is a clock read. This is a name-based static scan: it catches the
+            # cases a core author reaches for by reflex (datetime.datetime.now(),
+            # `import datetime as d; d.datetime.now()`), but an alias that hides
+            # the word datetime (`from datetime import datetime as dt; dt.now()`)
+            # slips through. The guard stops accidental clock reaches; it is not
+            # adversary-proof, and does not try to be (FINDINGS 2026-09-05).
+            # utcfromtimestamp/fromtimestamp are NOT here: they convert an epoch
+            # passed in, which is legitimate core work, not a clock read.
+            if last in ("now", "today", "utcnow") and any(
                 s in ("datetime", "date") for s in segs[:-1]
             ):
                 add(node.lineno, f"reads the system clock via {dotted}()")
@@ -155,6 +162,23 @@ def test_guard_flags_datetime_now():
 
 def test_guard_flags_date_today():
     assert check_source("from datetime import date\nx = date.today()\n")
+
+
+def test_guard_flags_datetime_utcnow():
+    """utcnow() reads the wall clock (returning naive UTC) just as now() does,
+    so it must trip the guard too."""
+    assert check_source("import datetime\nx = datetime.datetime.utcnow()\n")
+    assert check_source("from datetime import datetime\nx = datetime.utcnow()\n")
+
+
+def test_guard_allows_fromtimestamp_of_passed_in_epoch():
+    """Converting an epoch that was PASSED IN is core work, not a clock read;
+    the guard must not forbid it (guards against over-reach on the utcnow fix)."""
+    assert check_source(
+        "import datetime\n"
+        "def f(epoch: float):\n"
+        "    return datetime.datetime.utcfromtimestamp(epoch)\n"
+    ) == []
 
 
 def test_guard_flags_time_time():
