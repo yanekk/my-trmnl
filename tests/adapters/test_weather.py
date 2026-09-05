@@ -105,6 +105,16 @@ def test_request_asks_for_metric_units_and_the_given_point():
     assert params["longitude"] == LON
     assert params["temperature_unit"] == "celsius"
     assert params["wind_speed_unit"] == "kmh"
+    # timezone=GMT is what makes the returned timestamps UTC; the parser then
+    # stamps them tz-aware UTC unconditionally. If this param regressed, the API
+    # would return Warsaw-local times, the parser would mislabel them as UTC, and
+    # every hour on the screen would be silently off by the offset — with no other
+    # test to catch it. Lock it here, alongside the 2-day span the tz-boundary
+    # coverage depends on and the field lists the parser reads.
+    assert params["timezone"] == "GMT"
+    assert params["forecast_days"] == 2
+    assert params["current"] == "temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
+    assert params["hourly"] == "temperature_2m,precipitation_probability"
     # A timeout is always set so one slow source cannot stall the image (§2.6).
     assert client.calls[0]["timeout"] is not None
 
