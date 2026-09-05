@@ -13,12 +13,12 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** Plan written, then read back by a fresh session. Documents agree, the machine and the
-three live data sources match the plan, and nothing is being rebuilt (empty repo). Nothing built
-yet. Ready for the first `/pir-work`.
+**Status:** T00 spike built and smoke-tested locally; on-device display is unverified and needs
+the owner + the physical device. Handover raised; session waiting on the owner's report.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** implement T00 (the spike) — no dependencies. It needs the physical
-device and the owner's hands; raise the handover and wait.
+**Next `pir-work` will:** finish T00 once the owner confirms — record the device's request/headers
+in FINDINGS.md, delete `spike/`, mark T00 ✅. If it did not display, debug from the server log.
+Then T01.
 
 ## Tasks
 
@@ -27,7 +27,7 @@ done · ⛔ blocked, needs a human.
 
 | # | Task | Depends on | State | Notes |
 |---|---|---|---|---|
-| T00 | Spike: static image on the device | — | ⬜ | Throwaway. Needs the physical device + owner's hands. Gates image format and BYOS contract. |
+| T00 | Spike: static image on the device | — | 🟡 | Built: stdlib BYOS server + 800×480 1-bit BMP3, 4 endpoints smoke-tested locally, headers logged. On-device display UNVERIFIED — needs owner + device. Findings + spike/ removal pending that. |
 | T01 | Skeleton, Docker, boundary guard test | T00 | ⬜ | |
 | T02 | Pure core: assemble + refresh policy | T01 | ⬜ | |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
