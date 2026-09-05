@@ -13,13 +13,13 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T04 implemented, awaiting review. BYOS server speaks the four firmware endpoints on
-stdlib `http.server` (no framework dep); request logic is a socket-independent `App.handle` so
-it is tested with synthetic requests, plus one real-socket integration test. `refresh_rate`
-comes from the pure policy given an injected clock. Cold start serves the placeholder, never a
-404. Suite green (69 tests). T00 still the only hand-verified task.
+**Status:** T04 reviewed clean, no fix commit. BYOS server on stdlib `http.server` (no framework
+dep); socket-free `App.handle` synthetic-tested plus one real-socket integration test. Probed
+past the doc: shared `App` is stateless so threads are safe; the `.bmp` route ignores the path
+(no traversal); reads self-heal past an atomic rename. Suite green (69). T00 still the only
+hand-verified task; T05 (weather adapter) is next.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** review T04.
+**Next `pir-work` will:** implement T05 (weather adapter, Open-Meteo).
 
 ## Tasks
 
@@ -30,16 +30,16 @@ done · ⛔ blocked, needs a human.
 |---|---|---|---|---|
 | T00 | Spike: static image on the device | — | ✅ | Hand-verified with owner 2026-09-05: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted; contract corrections in FINDINGS. |
 | T01 | Skeleton, Docker, boundary guard test | T00 | ✅ | Reviewed; guard now also catches `datetime.utcnow()`. Residual aliased-datetime / pathlib-I/O gaps in FINDINGS, left by design. |
-| T02 | Pure core: assemble + refresh policy | T01 | ✅ | Reviewed clean. Both deviations (tz-aware `Event.start`, `HourPoint.time`) pull UTC→Warsaw into the core, correct per §3.1. Suite green. |
+| T02 | Pure core: assemble + refresh policy | T01 | ✅ | Reviewed clean; both deviations pull UTC→Warsaw into the core, correct per §3.1. |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ✅ | Reviewed. Five goldens eyeballed correct (populated, weather-down, empty-bus, empty-cal, startup); empty distinct from niedostępne; weekday map verified (2026-09-05=sb). Fixed: documented regen command lacked the `-v "$PWD":/app` mount, silently discarding regen (6492dfd). Plain titles owner-approved (§7); T08 adds a labels hook to `render()`. 53 green. |
-| T04 | BYOS HTTP server | T01, T02 | 🔍 | stdlib `http.server`, no framework dep (DESIGN §5 left the choice here). `App.handle(method,path,headers,body)→Response` is socket-free and synthetic-tested; `_Handler`+`make_server` add the socket. Headers read case/separator-insensitively; `/api/setup/` trailing slash handled. `image_url` from request Host. Filename is a content hash (skips redundant flashes — unverified on device, see FINDINGS). Cold start → placeholder, never 404. Review it. |
+| T04 | BYOS HTTP server | T01, T02 | ✅ | Reviewed clean, no fix commit. All 8 acceptance tests defend real behaviour (60/1800 refresh, content-hash filename, cold-start placeholder, 204 on bad body). Probed past doc: stateless `App` so threads safe; `.bmp` route ignores path (no traversal); atomic-rename reads self-heal; firmware sends no query string (T00 evidence). Flash-skip still unverified on device (T09). 69 green. |
 | T05 | Weather adapter (Open-Meteo) | T02 | ⬜ | |
 | T06 | Bus adapter (ckan2 departures) | T02 | ⬜ | |
 | T07 | Google Calendar adapter (OAuth) | T02 | ⬜ | Needs owner's Google account for one-time consent. Start early. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** T04
+**Review queue:** empty
 
 ## Blocked on the user
 
