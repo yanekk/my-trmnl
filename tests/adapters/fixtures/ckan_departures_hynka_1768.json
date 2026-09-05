@@ -1,0 +1,56 @@
+{
+  "lastUpdate": "2026-09-05T19:09:49Z",
+  "departures": [
+    {
+      "id": "T12R227",
+      "delayInSeconds": 49,
+      "estimatedTime": "2026-09-05T19:09:49Z",
+      "headsign": "Jelitkowo",
+      "routeId": 227,
+      "routeShortName": "227",
+      "scheduledTripStartTime": "2026-09-05T18:37:00Z",
+      "tripId": 12,
+      "status": "REALTIME",
+      "theoreticalTime": "2026-09-05T19:09:00Z",
+      "timestamp": "2026-09-05T19:09:29Z",
+      "trip": 27463121,
+      "vehicleCode": 2529,
+      "vehicleId": 195,
+      "vehicleService": "227-04"
+    },
+    {
+      "id": "T12R227",
+      "delayInSeconds": 0,
+      "estimatedTime": "2026-09-05T19:34:00Z",
+      "headsign": "Jelitkowo",
+      "routeId": 227,
+      "routeShortName": "227",
+      "scheduledTripStartTime": "2026-09-05T19:02:00Z",
+      "tripId": 12,
+      "status": "REALTIME",
+      "theoreticalTime": "2026-09-05T19:34:00Z",
+      "timestamp": "2026-09-05T19:09:48Z",
+      "trip": 27458546,
+      "vehicleCode": 2662,
+      "vehicleId": 145715,
+      "vehicleService": "227-05"
+    },
+    {
+      "id": "T00R199",
+      "delayInSeconds": 0,
+      "estimatedTime": "2026-09-05T19:20:00Z",
+      "headsign": "Port Lotniczy",
+      "routeId": 199,
+      "routeShortName": "199",
+      "scheduledTripStartTime": "2026-09-05T18:37:00Z",
+      "tripId": 99,
+      "status": "REALTIME",
+      "theoreticalTime": "2026-09-05T19:09:00Z",
+      "timestamp": "2026-09-05T19:09:29Z",
+      "trip": 27400000,
+      "vehicleCode": 2529,
+      "vehicleId": 195,
+      "vehicleService": "199-01"
+    }
+  ]
+}

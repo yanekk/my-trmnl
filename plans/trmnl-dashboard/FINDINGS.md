@@ -19,6 +19,8 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-05 | 📌 | T06 config resolved: line 227, Hynka poles stopId 1767 (→Chełm Cienista) and 1768 (→Jelitkowo), zone Gdańsk. Live feed 2026-09-05 confirms both serve 227. Owner already fixed Hynka/227 in DESIGN §7; config values land at T08. |
+| 2026-09-05 | 📌 | T06 bus adapter reads `estimatedTime` (ISO `Z`, UTC, realtime incl delay) as departure time. `resolve_stop_ids` returns `dict[str,list[int]]` (a name has two direction poles). Per-pole: 404/empty/unparseable pole skipped; `Failure` only when every pole fails. |
 | 2026-09-05 | 📌 | T05 weather adapter is coordinate-agnostic (lat/lon are args); Gdańsk city-centre default is fine, owner confirms the exact point at T08 config. Requests `timezone=GMT` (times UTC, core localizes) and pins metric units. Null hourly precip→0%; null temp→`Failure`. |
 | 2026-09-05 | 📌 | `docker compose run --rm test` reuses a stale baked image (Dockerfile `COPY`s source at build). New source/test files need `docker compose build test` first, or the `-v "$PWD":/app` mount. Suite read 69 until rebuild, then 83. |
 | 2026-09-05 | 📌 | T04 returns `filename` as a content hash of the served BMP, so an unchanged screen keeps its name and the firmware can skip a redundant full-screen flash. The name is ours (device fetches our `image_url`; `.bmp` route serves the one image). Flash-skip unverified on hardware — check at T09. |

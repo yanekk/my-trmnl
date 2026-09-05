@@ -1,0 +1,22 @@
+{
+  "lastUpdate": "2026-09-05T19:09:49Z",
+  "departures": [
+    {
+      "id": "T21R227",
+      "delayInSeconds": 0,
+      "estimatedTime": "2026-09-05T19:17:00Z",
+      "headsign": "Chełm Cienista",
+      "routeId": 227,
+      "routeShortName": "227",
+      "scheduledTripStartTime": "2026-09-05T19:08:00Z",
+      "tripId": 21,
+      "status": "REALTIME",
+      "theoreticalTime": "2026-09-05T19:17:00Z",
+      "timestamp": "2026-09-05T19:09:43Z",
+      "trip": 27454835,
+      "vehicleCode": 2549,
+      "vehicleId": 145979,
+      "vehicleService": "227-02"
+    }
+  ]
+}
