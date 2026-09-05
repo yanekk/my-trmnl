@@ -13,11 +13,11 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T01 implemented, awaiting review. Skeleton, Docker and the boundary guard are in;
-suite is green (13 tests) both via `docker compose run --rm test` and a local 3.13 venv. T00
-still the only hand-verified task.
+**Status:** T01 reviewed and done. Skeleton, Docker and the boundary guard are in; suite green
+(15 tests) via `docker compose run --rm --build test`. T02 (pure core) is next. T00 still the
+only hand-verified task.
 **Last updated:** 2026-09-05
-**Next `pir-work` will:** review T01.
+**Next `pir-work` will:** implement T02 (pure core: assemble + refresh policy).
 
 ## Tasks
 
@@ -26,8 +26,8 @@ done · ⛔ blocked, needs a human.
 
 | # | Task | Depends on | State | Notes |
 |---|---|---|---|---|
-| T00 | Spike: static image on the device | — | ✅ | Verified by hand with owner: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted. Contract corrections in FINDINGS for T04. Evidence was on-device hand-verification, not a code review. |
-| T01 | Skeleton, Docker, boundary guard test | T00 | 🔍 | Built trmnl/{core,adapters,render,server}, pyproject (Pillow/httpx/pytest pinned), Dockerfile+compose `test`, README, .gitignore, boundary guard + smoke test. 13 tests green via `docker compose run --rm test` (exit 0, no ANSI) and a local 3.13 venv. Guard also forbids `open()` (DESIGN §3.1) beyond the task's example tuple; proven to bite by synthetic bad sources, not by breaking a real module. |
+| T00 | Spike: static image on the device | — | ✅ | Hand-verified with owner 2026-09-05: real TRMNL (FW 1.5.12) displayed our 800×480 1-bit BMP3 from the LAN server. spike/ deleted; contract corrections in FINDINGS. |
+| T01 | Skeleton, Docker, boundary guard test | T00 | ✅ | Reviewed; one fix: guard missed `datetime.utcnow()` (a wall-clock read) — added it, 15 tests green. Acceptance all met: docker test exits 0, quiet, no ANSI; four packages + guard present, proven to bite by synthetic bad sources (also forbids `open()`, DESIGN §3.1). Probed guard evasions; residual aliased-datetime / pathlib-I/O gaps logged in FINDINGS, left by design. |
 | T02 | Pure core: assemble + refresh policy | T01 | ⬜ | |
 | T03 | Pillow renderer → 1-bit BMP, golden-tested | T01, T02 | ⬜ | Heavy. Reference is prototype/mock.html. No top bar. Empty regions draw "brak odjazdów"/"Brak wydarzeń"; also renders the startup placeholder. |
 | T04 | BYOS HTTP server | T01, T02 | ⬜ | Off critical path. Cold start serves the bundled placeholder (no image yet), never 404. |
@@ -37,7 +37,7 @@ done · ⛔ blocked, needs a human.
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
-**Review queue:** T01
+**Review queue:** empty
 
 ## Blocked on the user
 
