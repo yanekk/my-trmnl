@@ -34,7 +34,7 @@ done · ⛔ blocked, needs a human.
 | T04 | BYOS HTTP server | T01, T02 | ✅ | Reviewed clean. Stateless `App`, content-hash filename, cold-start placeholder, 204 on bad body, `.bmp` route ignores path. Flash-skip unverified on device (T09). |
 | T05 | Weather adapter (Open-Meteo) | T02 | ✅ | Reviewed. Code clean. Probed the tz contract: `.replace(tzinfo=utc)` is safe only because the request pins `timezone=GMT`; core keeps hourly points where `time>now` and Warsaw-date==today, so null-precip→0% far-horizon hours never leak in; `forecast_days=2` genuinely needed at the UTC-day boundary. Fix: request test asserted units but not `timezone`/`forecast_days` — a silent-mislabel gap; added those assertions (5a31177). 83 green. |
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean, no fix commit. All 9 test items defend real behaviour; empty-vs-down and per-pole isolation genuinely tested (dead pole → others render; all-fail → Failure). Probed: Py3.12 parses `Z` (else all poles fail); a malformed 227 row drops its whole pole; serial poles 10s each. Stale-image trap hit, 111 green with mount. |
-| T07 | Google Calendar adapter (OAuth) | T02 | 🔍 | Built calendar.py (fetch_events over Google REST via httpx) + google_auth.py (read-only scope, load/refresh, 0o600 token store, one-time consent). 24 tests. Deviations: httpx not the discovery client; all-day→Warsaw midnight per model; untitled→"(bez tytułu)" placeholder (owner confirm); calendar is one source (any cal error→region Failure). Added google-auth deps; rebuild image. OAuth consent unverified — owner's. |
+| T07 | Google Calendar adapter (OAuth) | T02 | 🔍 | Built calendar.py (fetch_events over Google REST via httpx) + google_auth.py (read-only scope, load/refresh, 0o600 token store, one-time consent). 24 tests. Deviations: httpx not the discovery client; all-day→Warsaw midnight per model; untitled→"(bez tytułu)" placeholder (owner confirm); calendar is one source (any cal error→region Failure). Added google-auth deps; rebuild image. OAuth consent verified by owner 2026-09-05 (FINDINGS); calendar id captured for T08. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ⬜ | |
 | T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
 
@@ -42,13 +42,11 @@ done · ⛔ blocked, needs a human.
 
 ## Blocked on the user
 
-T07 OAuth consent (unverified half). The calendar code is built and tested, but its refresh
-token can only be minted by the owner: create a Google Cloud project, enable the Calendar API,
-make an OAuth "Desktop app" client, download its client-secret JSON, then run the consent helper
-`google_auth.run_consent(client_secret_path, token_path)` and grant read-only calendar access.
-Seatbelt: scope is `calendar.readonly` (read-only), token stored 0o600 on the box. Owner tells
-back: did consent complete, and which calendar id(s) to read (primary, or others). Record the
-id(s) in config at T08 and note completion (dated) in FINDINGS. Not needed to review T07's code.
+T07 OAuth consent is done (verified 2026-09-05, FINDINGS). Read-only token minted, stored 0o600
+at ~/.config/trmnl/token.json on the dev Mac. Dashboard reads one calendar:
+pd0pfl6q60afma9et1o2n46f1c@group.calendar.google.com (Madziojankowy kalendarz). T08 wires this
+id and the token path into config. At T09 the token file must be copied to the deploy box (it is
+portable — a refresh token — so no second consent is needed).
 
 T09 still needs the physical device for on-device verification of the real dashboard. Config
-values (stops, line, coordinates, calendar id) are collected during T05/T06/T07/T09.
+values (stops, line, coordinates, calendar id) are collected during T05/T06/T09.
