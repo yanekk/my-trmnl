@@ -15,6 +15,13 @@ requires-python = ">=3.12"
 dependencies = [
     "Pillow==11.0.0",
     "httpx==0.28.1",
+    # Google Calendar (T07): google-auth loads/refreshes the read-only OAuth
+    # credential; google-auth-oauthlib runs the owner's one-time consent (and
+    # pulls in `requests`, which google-auth's refresh transport uses). The
+    # calendar events themselves are fetched over httpx, so the heavier
+    # google-api-python-client discovery client is deliberately not a dependency.
+    "google-auth==2.35.0",
+    "google-auth-oauthlib==1.2.1",
 ]
 
 [project.optional-dependencies]

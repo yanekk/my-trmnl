@@ -19,6 +19,8 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-05 | 📌 | T07 calendar adapter fetches Google Calendar REST over httpx (Bearer token), not the discovery client. New deps google-auth 2.35.0 + google-auth-oauthlib 1.2.1 — rebuild the image. Calendar is one source: any calendar error → whole-region Failure (no per-pole-style isolation). |
+| 2026-09-05 | 📌 | T07: all-day events placed at Warsaw local midnight (core buckets by day). Untitled event → "(bez tytułu)" placeholder — user-visible, owner to confirm wording. OAuth token stored 0o600, never logged (both asserted). Consent flow itself is owner-run, unverified. |
 | 2026-09-05 | 📌 | T06 review clean. `_parse_pole` reads `estimatedTime`; a 227 row lacking it (scheduled-only, no realtime) or otherwise malformed drops that whole pole, not just the row. Live feed 2026-09-05 always had it; watch on device at T09. |
 | 2026-09-05 | 📌 | T06 config resolved: line 227, Hynka poles stopId 1767 (→Chełm Cienista) and 1768 (→Jelitkowo), zone Gdańsk. Live feed 2026-09-05 confirms both serve 227. Owner already fixed Hynka/227 in DESIGN §7; config values land at T08. |
 | 2026-09-05 | 📌 | T06 bus adapter reads `estimatedTime` (ISO `Z`, UTC, realtime incl delay) as departure time. `resolve_stop_ids` returns `dict[str,list[int]]` (a name has two direction poles). Per-pole: 404/empty/unparseable pole skipped; `Failure` only when every pole fails. |

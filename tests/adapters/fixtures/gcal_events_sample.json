@@ -1,0 +1,66 @@
+{
+  "kind": "calendar#events",
+  "summary": "primary",
+  "timeZone": "Europe/Warsaw",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "id": "evt-dentysta",
+      "status": "confirmed",
+      "summary": "Dentysta",
+      "start": {"dateTime": "2026-09-05T14:30:00+02:00", "timeZone": "Europe/Warsaw"},
+      "end": {"dateTime": "2026-09-05T15:00:00+02:00", "timeZone": "Europe/Warsaw"}
+    },
+    {
+      "kind": "calendar#event",
+      "id": "evt-urlop",
+      "status": "confirmed",
+      "summary": "Urlop",
+      "start": {"date": "2026-09-06"},
+      "end": {"date": "2026-09-07"}
+    },
+    {
+      "kind": "calendar#event",
+      "id": "evt-trening_20260905T160000Z",
+      "status": "confirmed",
+      "summary": "Trening",
+      "recurringEventId": "evt-trening",
+      "start": {"dateTime": "2026-09-05T18:00:00+02:00", "timeZone": "Europe/Warsaw"},
+      "end": {"dateTime": "2026-09-05T19:00:00+02:00", "timeZone": "Europe/Warsaw"}
+    },
+    {
+      "kind": "calendar#event",
+      "id": "evt-trening_20260906T160000Z",
+      "status": "confirmed",
+      "summary": "Trening",
+      "recurringEventId": "evt-trening",
+      "start": {"dateTime": "2026-09-06T18:00:00+02:00", "timeZone": "Europe/Warsaw"},
+      "end": {"dateTime": "2026-09-06T19:00:00+02:00", "timeZone": "Europe/Warsaw"}
+    },
+    {
+      "kind": "calendar#event",
+      "id": "evt-untitled",
+      "status": "confirmed",
+      "start": {"dateTime": "2026-09-05T20:00:00+02:00", "timeZone": "Europe/Warsaw"},
+      "end": {"dateTime": "2026-09-05T20:30:00+02:00", "timeZone": "Europe/Warsaw"}
+    },
+    {
+      "kind": "calendar#event",
+      "id": "evt-spotkanie",
+      "status": "confirmed",
+      "summary": "Spotkanie zespołu",
+      "start": {"dateTime": "2026-09-05T16:00:00+02:00", "timeZone": "Europe/Warsaw"},
+      "end": {"dateTime": "2026-09-05T16:30:00+02:00", "timeZone": "Europe/Warsaw"},
+      "attendees": [
+        {"email": "kolega@example.com", "responseStatus": "accepted"},
+        {"email": "owner@example.com", "self": true, "responseStatus": "declined"}
+      ]
+    },
+    {
+      "kind": "calendar#event",
+      "id": "evt-trening_20260905T140000Z",
+      "status": "cancelled",
+      "recurringEventId": "evt-trening"
+    }
+  ]
+}
