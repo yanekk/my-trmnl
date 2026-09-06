@@ -13,10 +13,11 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T08 reviewed clean. The whole runs end to end from config + stubbed clients + fixed
-clock; 168 green. Only T09 (deploy + on-device) remains, and it needs the physical device.
+**Status:** T09 build half done: production `dashboard` compose service (`restart: always`) +
+README deploy note; 168 green (source mount). On-device verification is the outstanding half and
+needs the owner + the physical device — handover raised, awaiting the owner.
 **Last updated:** 2026-09-06
-**Next `pir-work` will:** implement T09 — but it is blocked on the physical device (see below).
+**Next `pir-work` will:** review T09's deploy artifacts once the owner has confirmed on device.
 
 ## Tasks
 
@@ -34,9 +35,10 @@ done · ⛔ blocked, needs a human.
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean. Per-pole isolation tested (dead pole → others render; all-fail → Failure). A malformed 227 row drops its whole pole; poles fetched serially, 10s each. |
 | T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean. OAuth consent hand-verified by owner 2026-09-05 (FINDINGS). Multi-day all-day gap handed to T08. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix commit. 168 green. Probed past the doc: every wiring signature (adapters, App, make_server) matches the real callee, not just the loop stubs; UTC `_clock` is converted to Warsaw in `refresh_seconds`; each source bounded by its httpx timeout; `os.replace` keeps the image atomic; multi-day span clips exclusive `[d0,d_end)` to today/tomorrow. Three deviations authorized. |
-| T09 | Deploy on home box + on-device verification | T08 | ⬜ | Hand-verified with owner. |
+| T09 | Deploy on home box + on-device verification | T08 | 🟡 | Build half done: `dashboard` service in docker-compose.yml (`restart: always`, port 8080, `/config` + `trmnl-data` mounts), README deploy note, 168 green. Outstanding half needs the owner on the device: cadence, live data, attribution, reboot recovery. Handover raised; awaiting owner. |
 
-**Review queue:** empty. T09 is next, but it is blocked on the physical device.
+**Review queue:** empty. T09 is 🟡 — its deploy artifacts are built; the on-device
+verification with the owner is outstanding before it can be reviewed and closed.
 
 ## Blocked on the user
 

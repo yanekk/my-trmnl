@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-06 | 📌 | T09 deploy: `docker compose up -d` runs the `dashboard` service (`restart: always`, publishes 8080). Box mounts `config.toml`+`token.json` ro at `/config`, `trmnl-data` volume at `/data`; deploy config sets `image_path=/data/screen.bmp`, `token_path=/config/token.json`. `test` moved under profile `test`; `run --rm test` unaffected. On-device verification pending. |
 | 2026-09-06 | 📌 | T08 wired the whole: `server/loop.py` (composition root, concurrent 3-source fetch each isolated to a Failure, last-good kept on render fail) + `adapters/config.py` (TOML). `assemble` gained a `near_minutes` kwarg; `render`/`RegionLabels` take config-suffixed titles. `config.toml` git-ignored; committed `startup.bmp` is the cold-start default. |
 | 2026-09-06 | 📌 | Owner decision (multi-day all-day event shows on every covered day) implemented in the calendar adapter: `_parse` expands `start.date`..`end.date` (exclusive) into one all-day Event per day, clipped to the today/tomorrow window. Model still carries no `end`. |
 | 2026-09-06 | 📌 | Config `service_start`/`service_end` are `time` but must be whole hours (loader rejects minutes): `core/refresh.py` keys on the hour only, so a non-zero minute would be silently dropped. Service window must not cross midnight (start < end). |
