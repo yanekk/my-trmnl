@@ -83,6 +83,18 @@ class WeatherData:
 
 
 @dataclass(frozen=True)
+class VehicleInfo:
+    """A bus's manufacturer and model, looked up by fleet number in the ZTM vehicle
+    database (DESIGN §2.3, T10). The core joins these to a `Departure`'s `vehicle`
+    (its fleet number) to draw "{brand} {model} · {number}"; a number with no entry
+    (a brand-new bus, or a database that could not be fetched) simply has no
+    `VehicleInfo` and the row falls back to the number alone."""
+
+    brand: str
+    model: str
+
+
+@dataclass(frozen=True)
 class Departure:
     """One upcoming bus. `when` is tz-aware (UTC as fetched from ckan2). There is
     no direction field in the feed; direction is implied by `headsign` and the
@@ -178,12 +190,19 @@ class BusRow:
     or "08:49" — so the renderer makes no time decisions. `vehicle` is the finished
     fleet-number text shown under the time — the number for a tracked bus, or "—"
     for a schedule-only run with no vehicle assigned yet — so every row draws the
-    same shape and the list stays consistent."""
+    same shape and the list stays consistent.
+
+    `maker` is "{brand} {model}" when the vehicle's fleet number is in the ZTM
+    vehicle database (DESIGN §2.3, T10), else None — a tracked bus not yet in the
+    database, or a schedule-only run with no vehicle. The renderer draws
+    "{maker} · {vehicle}" when present (trimming the model to fit while keeping the
+    brand and the number), and the number alone when None."""
 
     line: str
     headsign: str
     label: str
     vehicle: str
+    maker: str | None = None
 
 
 @dataclass(frozen=True)

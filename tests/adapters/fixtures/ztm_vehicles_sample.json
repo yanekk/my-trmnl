@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "sourceDate": "2026-09-06T05:00:00Z",
+    "license": "CC-BY 4.0"
+  },
+  "count": 5,
+  "results": [
+    {"vehicleCode": "2520", "brand": "Solaris", "model": "Urbino 12", "transportationType": "Autobus"},
+    {"vehicleCode": "2762", "brand": "Mercedes-Benz", "model": "Conecto", "transportationType": "Autobus"},
+    {"vehicleCode": "3112", "brand": "Solaris", "model": "Urbino 18", "transportationType": "Autobus"},
+    {"vehicleCode": "1201", "brand": "Pesa", "model": "Jazz Duo", "transportationType": "Tramwaj"},
+    {"vehicleCode": "9998", "brand": "", "model": "", "transportationType": "Autobus"}
+  ]
+}

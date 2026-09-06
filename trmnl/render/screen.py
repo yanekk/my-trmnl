@@ -142,6 +142,36 @@ def _ellipsize(text: str, font: ImageFont.FreeTypeFont, max_width: float) -> str
     return trimmed + ell if trimmed else ell
 
 
+def _vehicle_line(
+    maker: str | None,
+    number: str,
+    font: ImageFont.FreeTypeFont,
+    max_width: float,
+) -> str:
+    """The finished second line under a bus row's time (DESIGN §2.3, T10). With a
+    known make it is "{maker} · {number}"; with none it is the number (or "—")
+    alone. When the combined text overruns `max_width` the model is trimmed —
+    trailing words dropped, then the remainder ellipsized — while the brand (the
+    first word of `maker`) and the number are always kept (owner decision 1,
+    2026-09-06)."""
+    if not maker:
+        return number
+    full = f"{maker} · {number}"
+    if _text_width(full, font) <= max_width:
+        return full
+    # Drop trailing model words, keeping at least the brand, until it fits.
+    words = maker.split()
+    for cut in range(len(words) - 1, 0, -1):
+        candidate = f"{' '.join(words[:cut])} · {number}"
+        if _text_width(candidate, font) <= max_width:
+            return candidate
+    # Even "brand · number" overruns: ellipsize the brand but keep "· number", so
+    # the number is never lost to a very long single-word brand.
+    suffix = f" · {number}"
+    brand = _ellipsize(words[0], font, max_width - _text_width(suffix, font))
+    return brand + suffix
+
+
 def _hatch_rect(
     draw: ImageDraw.ImageDraw,
     x0: int,
@@ -380,9 +410,11 @@ def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
         dest_max = right - time_w - 12 - dest_x
         dest = _ellipsize("→ " + row.headsign, dest_f, dest_max)
         draw.text((dest_x, y + 2), dest, font=dest_f, fill=BLACK, anchor="lt")
-        # Vehicle number under the time, right-aligned, small — "—" when none, so
-        # every row draws the same shape.
-        draw.text((right, y + 24), row.vehicle, font=veh_f, fill=BLACK, anchor="rt")
+        # Make/model and number under the time, right-aligned, small — the number
+        # alone (or "—") when the make is unknown, so every row draws the same shape.
+        # The line spans the full row width so a long make has room before trimming.
+        veh_text = _vehicle_line(row.maker, row.vehicle, veh_f, right - left)
+        draw.text((right, y + 24), veh_text, font=veh_f, fill=BLACK, anchor="rt")
         y += row_h
         if y > rows_bottom:
             break

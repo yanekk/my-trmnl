@@ -44,6 +44,10 @@ image_path = "/var/lib/trmnl/screen.bmp"
 # Optional. The cold-start placeholder served until the first real image exists.
 # Defaults to the committed trmnl/render/startup.bmp, which is almost always right.
 # startup_path = "/var/lib/trmnl/startup.bmp"
+# Optional. Where the ZTM vehicle database (bus make/model by fleet number) is
+# cached on disk. Defaults to vehicles.json beside image_path, which is right when
+# image_path is in the box's writable state directory.
+# vehicle_cache_path = "/var/lib/trmnl/vehicles.json"
 # Optional. Bind address and port. 0.0.0.0 serves the whole LAN (the LAN-only
 # seatbelt is that the box is not exposed to the internet — DESIGN §5.2).
 host = "0.0.0.0"

@@ -54,6 +54,7 @@ class Config:
     service_end: time  # 00:00 means midnight (end-of-day), i.e. service runs until 24:00
     image_path: str  # where the refresh loop writes the served BMP (atomic rename)
     startup_path: str  # the committed cold-start placeholder BMP the server falls back to
+    vehicle_cache_path: str  # the on-disk ZTM vehicle-database cache (T10), beside image_path by default
     place: str  # weather heading suffix, e.g. "Gdańsk"
     stops_label: str  # buses heading suffix, e.g. "Hynka"
     host: str  # server bind address (LAN-only seatbelt is a deploy property, DESIGN §5.2)
@@ -118,6 +119,12 @@ def load_config(path: str | Path) -> Config:
     startup_path = _expand(
         server.get("startup_path") or _DEFAULT_STARTUP_PATH
     )
+    # The vehicle-database cache defaults to a file beside the served image (T10);
+    # both live in the box's writable state directory, so one path implies the other.
+    vehicle_cache_path = _expand(
+        server.get("vehicle_cache_path")
+        or str(Path(image_path).parent / "vehicles.json")
+    )
     host = server.get("host", "0.0.0.0")
     port = _positive_int(server, "server", "port", default=8080)
 
@@ -133,6 +140,7 @@ def load_config(path: str | Path) -> Config:
         service_end=service_end,
         image_path=image_path,
         startup_path=startup_path,
+        vehicle_cache_path=vehicle_cache_path,
         place=place,
         stops_label=stops_label,
         host=host,

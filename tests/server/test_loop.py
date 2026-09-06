@@ -26,6 +26,7 @@ from trmnl.core.model import (
     Failure,
     ServiceHours,
     Sources,
+    VehicleInfo,
     WeatherData,
 )
 from trmnl.render import screen
@@ -51,6 +52,7 @@ def _config(tmp_path, **over) -> Config:
         service_end=time(23, 0),
         image_path=str(tmp_path / "screen.bmp"),
         startup_path=STARTUP_BMP,
+        vehicle_cache_path=str(tmp_path / "vehicles.json"),
         place="Gdańsk",
         stops_label="Hynka",
         host="127.0.0.1",
@@ -314,7 +316,8 @@ def test_deps_caches_resolved_stop_ids_and_retries_after_a_download_failure(monk
         lat=0, lon=0, stops=["Hynka"], line="227", near_minutes=15,
         calendar_ids=["c"], token_path="t", service_start=time(5, 0),
         service_end=time(23, 0), image_path="i", startup_path="s",
-        place="Gdańsk", stops_label="Hynka", host="127.0.0.1", port=8080,
+        vehicle_cache_path="v", place="Gdańsk", stops_label="Hynka",
+        host="127.0.0.1", port=8080,
     )
     # First call: the stops download fails → no ids, and nothing is cached.
     monkeypatch.setattr(loop.bus, "fetch_stops", lambda http: Failure("stops down"))
@@ -332,3 +335,112 @@ def test_deps_caches_resolved_stop_ids_and_retries_after_a_download_failure(monk
     # A later download failure must not disturb the cached ids.
     monkeypatch.setattr(loop.bus, "fetch_stops", lambda http: Failure("down again"))
     assert deps.stop_ids(cfg) == [1767, 1768]
+
+
+# --- VehicleCache: miss-triggered fetch, disk round-trip (DESIGN §2.3, T10) --
+
+
+class _CountingFetch:
+    """A stub for vehicles.fetch_vehicles: returns a canned result and counts how
+    many times it was called, so a test can prove a fetch did or did not happen."""
+
+    def __init__(self, result):
+        self.result = result
+        self.calls = 0
+
+    def __call__(self, client):
+        self.calls += 1
+        return self.result
+
+
+def test_vehicle_cache_fetches_only_on_a_miss(tmp_path, monkeypatch):
+    fetch = _CountingFetch({"2520": VehicleInfo("Solaris", "Urbino 12")})
+    monkeypatch.setattr(loop.vehicles, "fetch_vehicles", fetch)
+    cache = loop.VehicleCache(str(tmp_path / "vehicles.json"))
+
+    # First cycle: the code is not cached → one download, and the lookup has it.
+    lookup = cache.ensure(["2520"], client=None)
+    assert lookup["2520"] == VehicleInfo("Solaris", "Urbino 12")
+    assert fetch.calls == 1
+
+    # Second cycle, same (already-cached) code → no further download.
+    cache.ensure(["2520"], client=None)
+    assert fetch.calls == 1
+
+    # A schedule-only run contributes no code (None/empty) → still no download.
+    cache.ensure([None, ""], client=None)
+    assert fetch.calls == 1
+
+
+def test_vehicle_cache_unknown_code_refetches_every_cycle(tmp_path, monkeypatch):
+    # An owner-accepted cost (2026-09-06): a number still absent after a download
+    # stays a miss, so each cycle re-downloads while it is present.
+    fetch = _CountingFetch({"2520": VehicleInfo("Solaris", "Urbino 12")})
+    monkeypatch.setattr(loop.vehicles, "fetch_vehicles", fetch)
+    cache = loop.VehicleCache(str(tmp_path / "vehicles.json"))
+
+    cache.ensure(["9999"], client=None)  # 9999 not in the fetched map
+    cache.ensure(["9999"], client=None)
+    assert fetch.calls == 2  # still missing → fetched again
+
+
+def test_vehicle_cache_failed_fetch_keeps_and_returns_the_previous_cache(tmp_path, monkeypatch):
+    good = _CountingFetch({"2520": VehicleInfo("Solaris", "Urbino 12")})
+    monkeypatch.setattr(loop.vehicles, "fetch_vehicles", good)
+    cache = loop.VehicleCache(str(tmp_path / "vehicles.json"))
+    cache.ensure(["2520"], client=None)  # cache populated
+
+    # A later miss whose download fails must keep the previous map, not clear it.
+    monkeypatch.setattr(
+        loop.vehicles, "fetch_vehicles", lambda client: Failure("db down")
+    )
+    lookup = cache.ensure(["2806"], client=None)
+    assert lookup["2520"] == VehicleInfo("Solaris", "Urbino 12")
+
+
+def test_vehicle_cache_round_trips_through_its_file(tmp_path, monkeypatch):
+    path = str(tmp_path / "vehicles.json")
+    fetch = _CountingFetch({"2520": VehicleInfo("Solaris", "Urbino 12")})
+    monkeypatch.setattr(loop.vehicles, "fetch_vehicles", fetch)
+
+    first = loop.VehicleCache(path)
+    first.ensure(["2520"], client=None)  # writes the file
+    assert os.path.exists(path)
+
+    # A fresh instance loads the persisted cache — no new download for a known code.
+    monkeypatch.setattr(loop.vehicles, "fetch_vehicles", _CountingFetch({}))  # would blank it
+    second = loop.VehicleCache(path)
+    lookup = second.ensure(["2520"], client=None)
+    assert lookup["2520"] == VehicleInfo("Solaris", "Urbino 12")
+
+
+def test_build_once_annotates_rows_with_makers_from_the_cache(tmp_path, monkeypatch):
+    # End to end through the composition root: a tracked departure whose number is in
+    # the vehicle database comes out of build_once with its maker set on the row.
+    _all_healthy(monkeypatch)
+    monkeypatch.setattr(
+        loop, "_fetch_bus",
+        lambda cfg, now, deps: [
+            Departure("227", "Jelitkowo", now + timedelta(minutes=5), realtime=True, vehicle="2520")
+        ],
+    )
+    monkeypatch.setattr(
+        loop.vehicles, "fetch_vehicles",
+        lambda client: {"2520": VehicleInfo("Solaris", "Urbino 12")},
+    )
+    cfg = _config(tmp_path)
+    deps = loop.Deps(
+        http=None, creds=object(), stop_ids=[1767],
+        vehicles=loop.VehicleCache(cfg.vehicle_cache_path),
+    )
+    seen = {}
+
+    def spy_render(dashboard, labels=None):
+        seen["buses"] = dashboard.buses
+        return screen.render(dashboard, labels)
+
+    monkeypatch.setattr(loop.screen, "render", spy_render)
+    loop.build_once(cfg, NOW, deps)
+
+    assert seen["buses"][0].maker == "Solaris Urbino 12"
+    assert seen["buses"][0].vehicle == "2520"

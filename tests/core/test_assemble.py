@@ -17,6 +17,7 @@ from trmnl.core.model import (
     Failure,
     HourPoint,
     Sources,
+    VehicleInfo,
     WeatherData,
 )
 
@@ -158,6 +159,38 @@ def test_realtime_shows_countdown_scheduled_shows_clock():
     # The vehicle number shows for tracked buses; the schedule-only one has none,
     # so it draws "—" to keep every row the same shape.
     assert [r.vehicle for r in d.buses] == ["3112", "2762", "—"]
+
+
+def test_bus_maker_joins_vehicle_number_to_the_database():
+    now = utc(2026, 1, 15, 12, 0)
+    deps = [
+        Departure("227", "Chełm", now.replace(minute=3), realtime=True, vehicle="2520"),  # known
+        Departure("227", "Jelitkowo", now.replace(minute=8), realtime=True, vehicle="9999"),  # tracked, not in DB
+        Departure("126", "Wrzeszcz", now.replace(minute=12), realtime=False),  # schedule-only, no vehicle
+    ]
+    vehicles = {"2520": VehicleInfo(brand="Solaris", model="Urbino 12")}
+    d = assemble(sources(bus=deps), now, vehicles=vehicles)
+    # A number in the database → "brand model"; still shows its number.
+    assert d.buses[0].maker == "Solaris Urbino 12"
+    assert d.buses[0].vehicle == "2520"
+    # A tracked bus whose number is absent → maker None, number still shown.
+    assert d.buses[1].maker is None
+    assert d.buses[1].vehicle == "9999"
+    # A schedule-only row (no vehicle) → maker None, "—".
+    assert d.buses[2].maker is None
+    assert d.buses[2].vehicle == "—"
+
+
+def test_bus_maker_defaults_to_none_when_no_database_passed():
+    # The cold/failure path: assemble called without a vehicles lookup yields
+    # number-only rows (every maker None), never raising.
+    now = utc(2026, 1, 15, 12, 0)
+    d = assemble(
+        sources(bus=[Departure("227", "Chełm", now.replace(minute=3), realtime=True, vehicle="2520")]),
+        now,
+    )
+    assert d.buses[0].maker is None
+    assert d.buses[0].vehicle == "2520"
 
 
 def test_departures_sorted_and_capped():

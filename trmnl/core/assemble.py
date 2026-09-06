@@ -19,6 +19,7 @@ The shape of the work per region:
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Mapping
 
 from .model import (
     ATTRIBUTION,
@@ -36,6 +37,7 @@ from .model import (
     HourView,
     Region,
     Sources,
+    VehicleInfo,
     WeatherData,
     WeatherView,
 )
@@ -85,7 +87,11 @@ def _icon_for(code: int) -> str:
 
 
 def assemble(
-    sources: Sources, now: datetime, *, near_minutes: int = NEAR_MINUTES
+    sources: Sources,
+    now: datetime,
+    *,
+    near_minutes: int = NEAR_MINUTES,
+    vehicles: Mapping[str, VehicleInfo] = {},
 ) -> Dashboard:
     """Build the full view-model from fetched sources and the current time.
 
@@ -93,7 +99,13 @@ def assemble(
     failure never affects another (DESIGN §2.6). `near_minutes` is retained for
     interface and config compatibility (the composition root still passes it) but
     no longer affects the board: the departure label is now driven by the feed's
-    realtime/scheduled status, not by distance (DESIGN §2.3, owner 2026-09-06)."""
+    realtime/scheduled status, not by distance (DESIGN §2.3, owner 2026-09-06).
+
+    `vehicles` maps a fleet number to its make/model (DESIGN §2.3, T10); a bus row
+    whose number is present gets `maker == "{brand} {model}"`, one absent (or a
+    schedule-only run with no number) gets `maker is None`. The empty default is the
+    cold/failure path — no lookup — which yields number-only rows. It is read-only
+    here, never mutated."""
     now_local = now.astimezone(WARSAW)
 
     if isinstance(sources.weather, Failure):
@@ -107,7 +119,7 @@ def assemble(
         buses: list[BusRow] = []
         buses_region = Region(available=False, as_of=None)
     else:
-        buses = _bus_rows(sources.bus, now)
+        buses = _bus_rows(sources.bus, now, vehicles)
         buses_region = Region(available=True, as_of=now)
 
     if isinstance(sources.calendar, Failure):
@@ -172,7 +184,9 @@ def _weather_hours(hourly: list[HourPoint], now: datetime) -> list[HourView]:
 # --- buses ------------------------------------------------------------------
 
 
-def _bus_rows(departures: list[Departure], now: datetime) -> list[BusRow]:
+def _bus_rows(
+    departures: list[Departure], now: datetime, vehicles: Mapping[str, VehicleInfo]
+) -> list[BusRow]:
     """Upcoming departures, sorted by time and capped (DESIGN §2.3). Departures
     already gone (`when < now`) are dropped so the list never shows a negative
     "za N min". An empty result is a valid available region ("brak odjazdów")."""
@@ -185,9 +199,23 @@ def _bus_rows(departures: list[Departure], now: datetime) -> list[BusRow]:
             # An em dash where no vehicle is assigned (schedule-only), so every row
             # draws the same shape (DESIGN §2.3, owner 2026-09-06).
             vehicle=d.vehicle if d.vehicle else "—",
+            maker=_maker_for(d.vehicle, vehicles),
         )
         for d in upcoming[:BUS_ROWS]
     ]
+
+
+def _maker_for(
+    vehicle: str | None, vehicles: Mapping[str, VehicleInfo]
+) -> str | None:
+    """The "{brand} {model}" text for a tracked bus whose fleet number is in the
+    vehicle database, else None (DESIGN §2.3, T10). A schedule-only run (no number)
+    or a number not in the database — a brand-new bus, or a database that could not
+    be fetched — yields None, and the renderer draws the number alone."""
+    if not vehicle:
+        return None
+    info = vehicles.get(vehicle)
+    return f"{info.brand} {info.model}" if info is not None else None
 
 
 def _bus_label(when: datetime, now: datetime, realtime: bool) -> str:

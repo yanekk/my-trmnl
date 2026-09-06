@@ -20,14 +20,12 @@ realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi 
 zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
 (`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
-This session (owner, on device): hourly weather strip now rolls the next 6 hours across midnight;
-service refresh 60s→120s; overnight slow window set to 00:00–06:00 (fast 06:00→midnight, via
-config `end="00:00"`→hour 24). All deployed live (181 green Mac, 167 Pi, `refresh_rate=120`).
-Then owner added T10 (bus manufacturer+model); requirements refined and the task written, not
-yet built. See FINDINGS.
-**Next `pir-work` will:** implement T10 — the owner asked for it next, out of order, while T09's
-on-device check stays with them. T09 stays 🟡 (implementation done, human verification pending);
-do not treat it as having implementation work left.
+This session: implemented T10 (bus make/model before the fleet number) — vehicle-DB adapter,
+disk cache with miss-triggered refetch, core join, renderer trim. 201 green Mac / 186 Pi 3.9.
+Not deployed (T10 render + the Pi service update fold into the next on-device pass). T09 still 🟡
+(owner's on-device check outstanding); do not treat it as having implementation work left.
+**Next `pir-work` will:** review T10 (it is 🔍, lowest 🔍). The reviewer did not write it —
+that is the point. T09 stays 🟡 for the owner's device check.
 
 ## Tasks
 
@@ -46,12 +44,11 @@ done · ⛔ blocked, needs a human.
 | T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean. OAuth consent hand-verified by owner 2026-09-05 (FINDINGS). Multi-day all-day gap handed to T08. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix commit. 168 green. Probed past the doc: every wiring signature (adapters, App, make_server) matches the real callee, not just the loop stubs; UTC `_clock` is converted to Warsaw in `refresh_seconds`; each source bounded by its httpx timeout; `os.replace` keeps the image atomic; multi-day span clips exclusive `[d0,d_end)` to today/tomorrow. Three deviations authorized. |
 | T09 | Deploy on home box + on-device verification | T08 | 🟡 | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`, all three sources verified live over HTTP. Docker deploy dropped (NAS/Pi have none). Outstanding, owner on the device: point the TRMNL at the Pi, judge cadence, confirm reboot recovery. Implementation complete; only the human device check remains. |
-| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ⬜ | Owner-added 2026-09-06; requirements refined with the owner this session. ZTM vehicle DB (one JSON, all vehicles by fleet number → brand/model), disk-cached, re-downloaded only on a cache miss; unknown vehicle shows number only and retries each cycle; a DB failure never breaks the bus region. Task file has the three owner decisions. |
+| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | 🔍 | Built: `adapters/vehicles.fetch_vehicles`, `VehicleInfo`, `BusRow.maker`, `assemble(vehicles=)`, `loop.VehicleCache` (disk cache + miss-triggered refetch), config `vehicle_cache_path`, renderer `maker · number` trimming model but keeping brand+number. 201 green Mac / 186 Pi 3.9 (scratch dir, live service untouched); goldens regen'd + eyeballed. Deviation: parser skips records with empty brand/model instead of filtering `transportationType=="Autobus"`. Make/model reading right on real buses = owner's on-device check (with T09). |
 
-**Review queue:** empty. T09 is 🟡 — deployed and serving on the Pi; its implementation is
-done and only the owner's on-device check (point the device, reboot check) remains, held open
-at the owner's request. T10 is ⬜ with all deps ✅; the owner asked for it to be built next,
-out of order, while T09's device check stays with them.
+**Review queue:** T10 (🔍, awaiting review). T09 is 🟡 — deployed and serving on the Pi; its
+implementation is done and only the owner's on-device check (point the device, reboot check)
+remains, held open at the owner's request.
 
 ## Blocked on the user
 

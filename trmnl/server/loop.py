@@ -26,6 +26,7 @@ one interval stale (DESIGN §2.5).
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -34,14 +35,21 @@ import time as _time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, time, timezone
-from typing import Callable
+from typing import Callable, Iterable
 
 import httpx
 
-from trmnl.adapters import bus, calendar, config as config_mod, google_auth, weather
+from trmnl.adapters import (
+    bus,
+    calendar,
+    config as config_mod,
+    google_auth,
+    vehicles,
+    weather,
+)
 from trmnl.adapters.config import Config
 from trmnl.core.assemble import assemble
-from trmnl.core.model import Failure, ServiceHours, Sources
+from trmnl.core.model import Failure, ServiceHours, Sources, VehicleInfo
 from trmnl.core.refresh import refresh_seconds
 from trmnl.render import screen
 from trmnl.render.screen import RegionLabels
@@ -62,12 +70,23 @@ class Deps:
     A failed stops download leaves the ids unresolved so the next cycle retries;
     a successful lookup is cached even when it resolves to nothing (a misconfigured
     stop name is not a transient fault). Tests pass `stop_ids` directly to skip the
-    download."""
+    download.
 
-    def __init__(self, http: httpx.Client, creds=None, stop_ids: list[int] | None = None):
+    `vehicles` is the disk-cached ZTM vehicle database (T10), held across cycles so
+    it is loaded once and refetched only on a cache miss; None disables the make/model
+    lookup entirely (rows show numbers), which is what the loop tests use."""
+
+    def __init__(
+        self,
+        http: httpx.Client,
+        creds=None,
+        stop_ids: list[int] | None = None,
+        vehicles: "VehicleCache | None" = None,
+    ):
         self.http = http
         self.creds = creds
         self._stop_ids: list[int] | None = list(stop_ids) if stop_ids is not None else None
+        self.vehicles = vehicles
 
     def stop_ids(self, cfg: Config) -> list[int]:
         if self._stop_ids is not None:
@@ -84,6 +103,81 @@ class Deps:
         if not ids:
             log.warning("bus: no poles resolved for stops %s (zone Gdańsk)", cfg.stops)
         return ids
+
+
+class VehicleCache:
+    """The on-disk ZTM vehicle database — a `{fleet number → VehicleInfo}` lookup
+    reloaded on startup and refetched only when a cycle's schedule holds a number
+    not already cached (DESIGN §2.3, §3.1, T10).
+
+    The parse and fetch are the adapter's (`adapters.vehicles`); the disk cache and
+    the miss-trigger are the composition root's, keeping the core and adapter pure
+    of storage (DESIGN §3.1). One download holds every vehicle, so after the first
+    fetch only a genuinely new bus triggers another. Decisions owner took 2026-09-06:
+
+    * A number still absent after a download stays a cache miss, so the next cycle
+      re-downloads — an unknown vehicle hits ZTM every cycle until it appears, no
+      suppression. That is `ensure` refetching whenever `wanted` is not a subset.
+    * A failed fetch leaves the cached map intact and returns it, so a
+      vehicle-database problem never fails the bus region (DESIGN §2.6) — the rows
+      fall back to numbers.
+
+    A corrupt or missing cache file loads as empty rather than raising, so a bad
+    file self-heals on the first fetch instead of taking the dashboard down."""
+
+    def __init__(self, path: str):
+        self._path = path
+        self._by_code: dict[str, VehicleInfo] = self._load()
+
+    def _load(self) -> dict[str, VehicleInfo]:
+        """The cache file as a lookup, or empty if it is missing/corrupt. The file
+        is our own `{code: {brand, model}}` JSON (see `_persist`), not the ZTM
+        wire shape, so it round-trips exactly what we stored."""
+        try:
+            with open(self._path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, ValueError):
+            return {}
+        out: dict[str, VehicleInfo] = {}
+        if isinstance(raw, dict):
+            for code, info in raw.items():
+                if isinstance(info, dict) and info.get("brand") and info.get("model"):
+                    out[str(code)] = VehicleInfo(brand=info["brand"], model=info["model"])
+        return out
+
+    def _persist(self) -> None:
+        """Rewrite the cache file atomically (temp sibling + os.replace, like the
+        image), so a crash mid-write never leaves a half-written cache. A write
+        failure is logged and swallowed: an un-persisted cache still works in
+        memory this run, it just reloads empty next start."""
+        data = {code: {"brand": v.brand, "model": v.model} for code, v in self._by_code.items()}
+        tmp = f"{self._path}.tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+            os.replace(tmp, self._path)
+        except OSError as exc:
+            log.warning("vehicles: could not persist cache to %s (%s)", self._path, exc)
+
+    def ensure(self, codes: Iterable[str], client: httpx.Client) -> dict[str, VehicleInfo]:
+        """Return the make/model lookup, downloading the whole database first if any
+        of `codes` (this cycle's tracked fleet numbers) is not already cached. A
+        successful download replaces the cache and rewrites the file; a failure keeps
+        and returns the existing cache (DESIGN §2.6). Falsy codes (a schedule-only
+        run's absent number) are ignored."""
+        wanted = {c for c in codes if c}
+        if not wanted or wanted.issubset(self._by_code):
+            return self._by_code
+        fetched = vehicles.fetch_vehicles(client)
+        if isinstance(fetched, Failure):
+            log.warning(
+                "vehicles: database unavailable (%s); rows fall back to numbers",
+                fetched.reason,
+            )
+            return self._by_code
+        self._by_code = fetched
+        self._persist()
+        return self._by_code
 
 
 @dataclass(frozen=True)
@@ -106,7 +200,10 @@ def build_once(cfg: Config, now: datetime, deps: Deps) -> BuildResult:
     degrades its region (DESIGN §2.6), and a render/write failure keeps the
     last-good image rather than crashing the loop."""
     sources = _fetch_sources(cfg, now, deps)
-    dashboard = assemble(sources, now, near_minutes=cfg.near_minutes)
+    vehicle_lookup = _ensure_vehicles(sources.bus, deps)
+    dashboard = assemble(
+        sources, now, near_minutes=cfg.near_minutes, vehicles=vehicle_lookup
+    )
     labels = region_labels(cfg)
     try:
         image = screen.render(dashboard, labels)
@@ -121,6 +218,23 @@ def build_once(cfg: Config, now: datetime, deps: Deps) -> BuildResult:
         )
         return BuildResult(sources=sources, published=False, reason=f"render/publish: {exc}")
     return BuildResult(sources=sources, published=True)
+
+
+def _ensure_vehicles(bus_result, deps: Deps) -> dict[str, VehicleInfo]:
+    """This cycle's make/model lookup (DESIGN §2.3, T10). Collects the tracked fleet
+    numbers from the departures and asks the disk cache to ensure them — a download
+    only on a miss, the existing cache otherwise or on a failed fetch. When the bus
+    fetch itself failed there are no rows to annotate, so an empty list is ensured
+    (no fetch) and an empty lookup is fine. `deps.vehicles` None disables the feature
+    (rows show numbers), which the loop tests rely on."""
+    if deps.vehicles is None:
+        return {}
+    codes = (
+        []
+        if isinstance(bus_result, Failure)
+        else [d.vehicle for d in bus_result if d.vehicle]
+    )
+    return deps.vehicles.ensure(codes, deps.http)
 
 
 def _fetch_sources(cfg: Config, now: datetime, deps: Deps) -> Sources:
@@ -252,7 +366,7 @@ def main(argv: list[str] | None = None) -> None:
         )
 
     http = httpx.Client()
-    deps = Deps(http=http, creds=creds)
+    deps = Deps(http=http, creds=creds, vehicles=VehicleCache(cfg.vehicle_cache_path))
     service = service_hours(cfg)
 
     app = App(
