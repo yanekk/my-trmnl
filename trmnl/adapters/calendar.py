@@ -100,7 +100,7 @@ def fetch_events(
             return Failure(f"calendar: HTTP {resp.status_code}")
 
         try:
-            events.extend(_parse(resp.json()))
+            events.extend(_parse(resp.json(), *_window_days(now)))
         except (ValueError, KeyError, TypeError) as exc:
             # ValueError also covers json() on a non-JSON body and fromisoformat on
             # a malformed timestamp; a half-parsed response is never returned.
@@ -122,14 +122,26 @@ def _window(now: datetime) -> tuple[str, str]:
     return now.isoformat(), time_max.isoformat()
 
 
-def _parse(payload: dict) -> list[Event]:
+def _window_days(now: datetime) -> tuple[date, date]:
+    """The two Europe/Warsaw calendar days the screen shows: today and tomorrow.
+    A multi-day all-day event is expanded across only these (see `_parse`)."""
+    today = now.astimezone(WARSAW).date()
+    return today, today + timedelta(days=1)
+
+
+def _parse(payload: dict, first_day: date, last_day: date) -> list[Event]:
     """Turn one events.list response into `Event`s, dropping cancelled and
     owner-declined items.
 
-    A timed event carries `start.dateTime` (tz-aware); an all-day event carries
-    `start.date` (a floating date), which is placed at Europe/Warsaw local midnight
-    so the core can bucket it by day (the contract in `core.model.Event`). A
-    non-cancelled item missing the fields it needs raises and the caller returns
+    A timed event carries `start.dateTime` (tz-aware) and becomes one `Event` at
+    that instant. An all-day event carries `start.date`/`end.date` (floating dates,
+    `end` exclusive) and is expanded into one `Event` per calendar day it covers
+    that falls within [`first_day`, `last_day`] — today and tomorrow — each placed
+    at Europe/Warsaw local midnight so the core buckets it by day (the contract in
+    `core.model.Event`). This is why a running multi-day event (a vacation started
+    days ago) still shows on every day it covers rather than vanishing (owner
+    decision 2026-09-06; the model carries no `end`, so the span is expanded here).
+    A non-cancelled item missing the fields it needs raises and the caller returns
     `Failure`; a cancelled item (which may be only id+status) is skipped before its
     fields are touched."""
     items = payload["items"]
@@ -151,17 +163,39 @@ def _parse(payload: dict) -> list[Event]:
                 )
             )
         else:
-            # All-day: `date` is "YYYY-MM-DD", no time. Place it at Warsaw local
-            # midnight so the core buckets it into the right calendar day.
-            d = date.fromisoformat(start["date"])
-            events.append(
-                Event(
-                    start=datetime(d.year, d.month, d.day, tzinfo=WARSAW),
-                    title=title,
-                    all_day=True,
-                )
-            )
+            # All-day: `start.date`/`end.date` are "YYYY-MM-DD" with `end`
+            # exclusive; a single-day event has end = start + 1 day. Emit one row
+            # per covered day inside the visible window, at Warsaw local midnight.
+            events.extend(_all_day_span(item, start, title, first_day, last_day))
     return events
+
+
+def _all_day_span(
+    item: dict, start: dict, title: str, first_day: date, last_day: date
+) -> list[Event]:
+    """One all-day `Event` per calendar day the item covers within [`first_day`,
+    `last_day`]. Google's `end.date` is exclusive; when it is absent the event is
+    treated as a single day (`start.date` + 1). Days outside the window are
+    dropped because the screen only shows today and tomorrow, so a long event does
+    not expand into hundreds of rows the core would discard anyway."""
+    d0 = date.fromisoformat(start["date"])
+    end = item.get("end", {})
+    d_end = date.fromisoformat(end["date"]) if "date" in end else d0 + timedelta(days=1)
+
+    day = max(d0, first_day)
+    # d_end is exclusive, so the last covered day is d_end - 1; clip to the window.
+    last = min(d_end - timedelta(days=1), last_day)
+    rows: list[Event] = []
+    while day <= last:
+        rows.append(
+            Event(
+                start=datetime(day.year, day.month, day.day, tzinfo=WARSAW),
+                title=title,
+                all_day=True,
+            )
+        )
+        day += timedelta(days=1)
+    return rows
 
 
 def _declined(item: dict) -> bool:

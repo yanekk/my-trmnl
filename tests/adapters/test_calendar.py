@@ -181,6 +181,55 @@ def test_events_from_several_calendars_are_merged():
     assert len(client.calls) == 2
 
 
+# --- multi-day all-day events (owner decision 2026-09-06, T08) ---------------
+
+
+def _all_day(start, end, summary="Urlop"):
+    return {"items": [{"status": "confirmed", "summary": summary,
+                       "start": {"date": start}, "end": {"date": end}}]}
+
+
+def test_multi_day_all_day_event_shows_on_every_covered_day_in_the_window():
+    # A vacation running 09-04..09-07 (end exclusive 09-08) that started before
+    # today must show on today AND tomorrow, not vanish (owner decision). NOW is
+    # 09-05 Warsaw, so the window is today 09-05 and tomorrow 09-06.
+    result = fetch_events(
+        [CAL_ID], NOW, _FakeCreds(), _StubClient(default=_ok(_all_day("2026-09-04", "2026-09-08")))
+    )
+    assert isinstance(result, list)
+    starts = sorted(e.start for e in result)
+    assert starts == [
+        datetime(2026, 9, 5, tzinfo=WARSAW),
+        datetime(2026, 9, 6, tzinfo=WARSAW),
+    ]
+    assert all(e.all_day and e.title == "Urlop" for e in result)
+
+
+def test_single_day_all_day_event_still_yields_one_row():
+    # The common case (end = start + 1 day) is unchanged: exactly one row.
+    result = fetch_events(
+        [CAL_ID], NOW, _FakeCreds(), _StubClient(default=_ok(_all_day("2026-09-06", "2026-09-07")))
+    )
+    assert [e.start for e in result] == [datetime(2026, 9, 6, tzinfo=WARSAW)]
+
+
+def test_all_day_event_beyond_tomorrow_is_dropped():
+    # Days outside today/tomorrow are never drawn, so they are not emitted: an
+    # event wholly on the day after tomorrow yields no rows.
+    result = fetch_events(
+        [CAL_ID], NOW, _FakeCreds(), _StubClient(default=_ok(_all_day("2026-09-07", "2026-09-08")))
+    )
+    assert result == []
+
+
+def test_all_day_event_without_an_end_is_treated_as_one_day():
+    # Defensive: a malformed item missing end.date falls back to a single day.
+    payload = {"items": [{"status": "confirmed", "summary": "Święto",
+                          "start": {"date": "2026-09-05"}}]}
+    result = fetch_events([CAL_ID], NOW, _FakeCreds(), _StubClient(default=_ok(payload)))
+    assert [e.start for e in result] == [datetime(2026, 9, 5, tzinfo=WARSAW)]
+
+
 # --- the request shape (DESIGN §2.4, §2.6) ----------------------------------
 
 

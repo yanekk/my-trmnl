@@ -27,6 +27,7 @@ does not carry, so they are not drawn here (see PROGRESS T03 note).
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -80,6 +81,20 @@ _LABEL_CALENDAR = "KALENDARZ"
 _UNAVAILABLE = "niedostępne"
 _NO_DEPARTURES = "brak odjazdów"
 _NO_EVENTS = "Brak wydarzeń"
+
+
+@dataclass(frozen=True)
+class RegionLabels:
+    """The three region titles, already cased for the panel. The defaults are the
+    plain Polish words, so a `render()` with no labels draws exactly what the
+    golden tests expect and they stay valid. The composition root (T08) passes
+    config-suffixed, uppercased titles like "POGODA · GDAŃSK" and
+    "ODJAZDY · HYNKA · 227" (DESIGN §7, the 2026-09-05 T03 decision), keeping the
+    city/line out of the pure core and out of the view-model."""
+
+    weather: str = _LABEL_WEATHER
+    buses: str = _LABEL_BUSES
+    calendar: str = _LABEL_CALENDAR
 
 
 # --- low-level drawing helpers ----------------------------------------------
@@ -262,12 +277,12 @@ def _draw_icon(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int, key: str) -> No
 # --- weather region ---------------------------------------------------------
 
 
-def _render_weather(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
+def _render_weather(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> None:
     if not dash.weather_region.available or dash.weather is None:
-        _draw_unavailable(draw, WEATHER_BOX, _LABEL_WEATHER)
+        _draw_unavailable(draw, WEATHER_BOX, label)
         return
 
-    _region_label(draw, WEATHER_BOX, _LABEL_WEATHER)
+    _region_label(draw, WEATHER_BOX, label)
     w = dash.weather
 
     # Icon top-right of the region.
@@ -336,13 +351,13 @@ def _render_hours(draw: ImageDraw.ImageDraw, hours: list) -> None:
 # --- buses region -----------------------------------------------------------
 
 
-def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
+def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> None:
     if not dash.buses_region.available:
-        _draw_unavailable(draw, BUSES_BOX, _LABEL_BUSES)
+        _draw_unavailable(draw, BUSES_BOX, label)
         _render_attribution(draw, dash)
         return
 
-    content_top = _region_label(draw, BUSES_BOX, _LABEL_BUSES)
+    content_top = _region_label(draw, BUSES_BOX, label)
     left = LEFT_W + PAD
     right = WIDTH - PAD
 
@@ -396,12 +411,12 @@ def _render_attribution(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
 # --- calendar region --------------------------------------------------------
 
 
-def _render_calendar(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
+def _render_calendar(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> None:
     if not dash.calendar_region.available:
-        _draw_unavailable(draw, CAL_BOX, _LABEL_CALENDAR)
+        _draw_unavailable(draw, CAL_BOX, label)
         return
 
-    _region_label(draw, CAL_BOX, _LABEL_CALENDAR)
+    _region_label(draw, CAL_BOX, label)
 
     # Two day columns with a hairline between them.
     col_top = TOP_H + PAD + 26
@@ -509,15 +524,20 @@ def _dividers(draw: ImageDraw.ImageDraw) -> None:
 # --- public API -------------------------------------------------------------
 
 
-def render(dashboard: Dashboard) -> Image.Image:
+def render(dashboard: Dashboard, labels: RegionLabels | None = None) -> Image.Image:
     """Draw the whole dashboard to an 800×480 1-bit image (DESIGN §2.1). Pure of
-    clock and network; deterministic, so it is golden-tested (DESIGN §3.1)."""
+    clock and network; deterministic, so it is golden-tested (DESIGN §3.1).
+
+    `labels` supplies the three region titles; when omitted the plain Polish
+    defaults are used (so the goldens, which pass no labels, are unaffected). The
+    composition root (T08) passes config-suffixed titles from the config file."""
+    labels = labels or RegionLabels()
     img = Image.new("1", (WIDTH, HEIGHT), WHITE)
     draw = ImageDraw.Draw(img)
     _dividers(draw)
-    _render_weather(draw, dashboard)
-    _render_buses(draw, dashboard)
-    _render_calendar(draw, dashboard)
+    _render_weather(draw, dashboard, labels.weather)
+    _render_buses(draw, dashboard, labels.buses)
+    _render_calendar(draw, dashboard, labels.calendar)
     return img
 
 

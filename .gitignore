@@ -7,3 +7,7 @@ __pycache__/
 # Virtualenvs
 .venv/
 venv/
+
+# The real config carries the household's coordinates and calendar id, which stay
+# in the house (DESIGN §1). Only config.example.toml is committed.
+config.toml

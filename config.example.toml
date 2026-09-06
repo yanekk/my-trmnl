@@ -1,0 +1,50 @@
+# Example config for the TRMNL dashboard server (loaded by trmnl/adapters/config.py).
+#
+# Copy this to `config.toml` on the box and fill in the household's real values.
+# The real config carries the owner's coordinates and calendar id, which stay in
+# the house (DESIGN §1), so `config.toml` is git-ignored — only this example ships.
+#
+# Run the server with:  python -m trmnl.server.loop config.toml
+# (or set TRMNL_CONFIG=/path/to/config.toml and run  python -m trmnl.server.loop )
+
+[location]
+# The fixed point weather is fetched for (Open-Meteo, no API key). Decimal degrees.
+# This example is Gdańsk city centre; set the household's exact point.
+lat = 54.372
+lon = 18.638
+place = "Gdańsk"          # shown in the weather heading: "POGODA · GDAŃSK"
+
+[buses]
+# Stop *names* as they appear in the Gdańsk ZTM stops dataset; each name may cover
+# two poles (one per direction) and both are used (DESIGN §2.3). The pole ids are
+# resolved from the daily dataset at startup and cached.
+stops = ["Hynka"]
+line = "227"              # the one line shown
+stops_label = "Hynka"    # shown in the buses heading: "ODJAZDY · HYNKA · 227"
+near_minutes = 15         # a departure closer than this reads as "za N min"
+
+[calendar]
+# One or more Google Calendar ids to read (read-only OAuth). The refresh token is
+# a separate file, stored 0o600 by the one-time consent flow (DESIGN §3.5); this
+# only points at it. A leading ~ is expanded to the deploy user's home.
+ids = ["your-calendar-id@group.calendar.google.com"]
+token_path = "~/.config/trmnl/token.json"
+
+[service]
+# The daily bus-service window in Europe/Warsaw, whole hours only. Inside it the
+# device (and the build loop) refresh every 60s; outside it, every 1800s to cut
+# needless full-screen flashes overnight (DESIGN §2.5). Must not cross midnight.
+start = "05:00"
+end = "23:00"
+
+[server]
+# Where the refresh loop writes the served image (atomic temp+rename). The device
+# is handed a content-hashed URL under this file. Use an absolute path on the box.
+image_path = "/var/lib/trmnl/screen.bmp"
+# Optional. The cold-start placeholder served until the first real image exists.
+# Defaults to the committed trmnl/render/startup.bmp, which is almost always right.
+# startup_path = "/var/lib/trmnl/startup.bmp"
+# Optional. Bind address and port. 0.0.0.0 serves the whole LAN (the LAN-only
+# seatbelt is that the box is not exposed to the internet — DESIGN §5.2).
+host = "0.0.0.0"
+port = 8080
