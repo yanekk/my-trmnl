@@ -1,7 +1,8 @@
 # Implementation plan
 
-10 tasks in 4 phases. Each has a file in [tasks/](tasks/) with its goal, the files it touches,
-the interfaces it defines, and what "done" means.
+11 tasks in 5 phases. Each has a file in [tasks/](tasks/) with its goal, the files it touches,
+the interfaces it defines, and what "done" means. T10 is an owner-added enhancement (2026-09-06),
+appended after the original ten shipped.
 
 Track state in [PROGRESS.md](PROGRESS.md). Read [DESIGN.md](DESIGN.md) first.
 
@@ -28,6 +29,7 @@ Phase 0  ▸  T00                     prove the ground             throwaway
 Phase 1  ▸  T01 T02 T03 T04         core, renderer, server       no live data
 Phase 2  ▸  T05 T06 T07             weather, bus, calendar        against fixtures
 Phase 3  ▸  T08 T09                 integrate, deploy, verify     device in the loop
+Phase 4  ▸  T10                     enhancements (post-deploy)    owner-added
 ```
 
 ---
@@ -78,6 +80,15 @@ At the end: the real dashboard runs unattended on the home box and has been seen
 |---|---|---|
 | [T08](tasks/T08-integrate.md) | Composition root, refresh loop, config, end-to-end degradation | T03, T04, T05, T06, T07 |
 | [T09](tasks/T09-deploy-verify.md) | Deploy on the home box, run at boot, on-device hand-verification | T08 |
+
+## Phase 4 — Enhancements (post-deploy)
+
+Owner-added work once the dashboard was running. Each rides the same build/review alternation;
+no separate plan-review (the plan was already being built when these were added).
+
+| # | Task | Depends on |
+|---|---|---|
+| [T10](tasks/T10-vehicle-info.md) | Bus manufacturer + model before the fleet number, from the ZTM vehicle database (disk-cached, miss-triggered refetch) | T03, T06, T08 |
 
 ---
 

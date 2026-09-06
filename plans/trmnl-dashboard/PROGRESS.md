@@ -22,9 +22,12 @@ zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local
 **Last updated:** 2026-09-06
 This session (owner, on device): hourly weather strip now rolls the next 6 hours across midnight;
 service refresh 60s→120s; overnight slow window set to 00:00–06:00 (fast 06:00→midnight, via
-config `end="00:00"`→hour 24). All deployed live (181 green Mac, 167 Pi, `refresh_rate=120`). See FINDINGS.
-**Next `pir-work` will:** review T09 (deploy scripts + on-device outcome) once the owner has
-pointed the device at the Pi, re-checked the screen, and done the reboot check.
+config `end="00:00"`→hour 24). All deployed live (181 green Mac, 167 Pi, `refresh_rate=120`).
+Then owner added T10 (bus manufacturer+model); requirements refined and the task written, not
+yet built. See FINDINGS.
+**Next `pir-work` will:** implement T10 — the owner asked for it next, out of order, while T09's
+on-device check stays with them. T09 stays 🟡 (implementation done, human verification pending);
+do not treat it as having implementation work left.
 
 ## Tasks
 
@@ -42,10 +45,13 @@ done · ⛔ blocked, needs a human.
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean. Per-pole isolation tested (dead pole → others render; all-fail → Failure). A malformed 227 row drops its whole pole; poles fetched serially, 10s each. |
 | T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean. OAuth consent hand-verified by owner 2026-09-05 (FINDINGS). Multi-day all-day gap handed to T08. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix commit. 168 green. Probed past the doc: every wiring signature (adapters, App, make_server) matches the real callee, not just the loop stubs; UTC `_clock` is converted to Warsaw in `refresh_seconds`; each source bounded by its httpx timeout; `os.replace` keeps the image atomic; multi-day span clips exclusive `[d0,d_end)` to today/tomorrow. Three deviations authorized. |
-| T09 | Deploy on home box + on-device verification | T08 | 🟡 | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`, all three sources verified live over HTTP. Docker deploy dropped (NAS/Pi have none). Outstanding, owner on the device: point the TRMNL at the Pi, judge cadence, confirm reboot recovery. |
+| T09 | Deploy on home box + on-device verification | T08 | 🟡 | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`, all three sources verified live over HTTP. Docker deploy dropped (NAS/Pi have none). Outstanding, owner on the device: point the TRMNL at the Pi, judge cadence, confirm reboot recovery. Implementation complete; only the human device check remains. |
+| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ⬜ | Owner-added 2026-09-06; requirements refined with the owner this session. ZTM vehicle DB (one JSON, all vehicles by fleet number → brand/model), disk-cached, re-downloaded only on a cache miss; unknown vehicle shows number only and retries each cycle; a DB failure never breaks the bus region. Task file has the three owner decisions. |
 
-**Review queue:** empty. T09 is 🟡 — deployed and serving on the Pi; the on-device
-verification with the owner (point the device, reboot check) is outstanding before it closes.
+**Review queue:** empty. T09 is 🟡 — deployed and serving on the Pi; its implementation is
+done and only the owner's on-device check (point the device, reboot check) remains, held open
+at the owner's request. T10 is ⬜ with all deps ✅; the owner asked for it to be built next,
+out of order, while T09's device check stays with them.
 
 ## Blocked on the user
 

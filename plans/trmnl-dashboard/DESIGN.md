@@ -87,9 +87,13 @@ its timetable clock time, e.g. "09:52". The countdown-vs-clock format is the sig
 time on the board always means "from the timetable, not yet tracked", matching the ZTM app.
 This replaced an earlier rule that chose the format by distance (a `near_minutes` threshold);
 `near_minutes` remains a config field but no longer affects the label. Under each time, in the
-small attribution-sized font, is the vehicle's fleet number (feed `vehicleCode`), or "—" when
-no vehicle is assigned yet (schedule-only); every row carries this line so the rows stay a
-consistent height (owner, 2026-09-06). The list mixes both
+small attribution-sized font, is the vehicle's manufacturer, model and fleet number —
+"`{brand} {model} · {number}`", e.g. "Solaris Urbino 12 · 2520" (T10, owner 2026-09-06). The
+manufacturer and model come from the ZTM vehicle database (below); when the combined text does
+not fit the column the model is trimmed (trailing words dropped, then ellipsized) while the
+brand and number are always kept. A tracked vehicle whose number is not in the database shows
+the number alone; a schedule-only row with no vehicle shows "—". Every row carries this line so
+the rows stay a consistent height (owner, 2026-09-06). The list mixes both
 directions/stops and is sorted by time, because the owner wants "what leaves next", not a
 per-stop board. This simpler list replaced an earlier per-stop boxed layout at the owner's
 request (§7). Rows have no separator rule between them (owner, 2026-09-06); the whitespace is
@@ -107,6 +111,17 @@ Europe/Warsaw for display.
 The feed is cached about 20 seconds per stop upstream, so polling faster than that gains
 nothing; our ~120s refresh is well within it. The legacy `/delays` endpoint is dead (404) and
 must not be used.
+
+The manufacturer and model come from the ZTM vehicle database, a single JSON file listing every
+vehicle by fleet number
+(`https://files.cloudgdansk.pl/d/otwarte-dane/ztm/baza-pojazdow.json?v=2`, ~340 KB, no key;
+each record carries `vehicleCode`, `brand`, `model`). It is downloaded, parsed to a
+`{fleet number → brand/model}` map, and cached on disk (T10). It is re-downloaded only when a
+cycle's schedule contains a fleet number absent from the cache — one download holds every
+vehicle, so after the first fetch only a genuinely new bus triggers another. A vehicle still
+absent after a download shows the number alone and, being a persistent cache miss, re-downloads
+each cycle until it appears (owner accepted, 2026-09-06). A failed download leaves the cached
+map intact and never fails the bus region — the rows just fall back to numbers.
 
 Attribution is required: the data is CC-BY 4.0, so the screen carries a small credit to
 Gdańsk open data ("Otwarte dane ZTM Gdańsk" or equivalent). This is a licence obligation, not
