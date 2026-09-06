@@ -185,7 +185,7 @@ def test_missing_hourly_block_returns_failure():
 
 def test_misaligned_hourly_arrays_return_failure():
     # A short temperature array against a full time array is a malformed body,
-    # caught by zip(strict=True) rather than silently truncated.
+    # caught by the parser's explicit length check rather than silently truncated.
     bad = _fixture()
     bad["hourly"]["temperature_2m"] = bad["hourly"]["temperature_2m"][:10]
     assert isinstance(fetch_weather(LAT, LON, NOW, _StubClient(payload=bad)), Failure)

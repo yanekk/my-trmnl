@@ -96,9 +96,13 @@ def _parse(payload: dict) -> WeatherData:
     codes = hourly["weather_code"]
 
     points: list[HourPoint] = []
-    # strict=True: mismatched array lengths are a malformed body, not a silent
-    # truncation. Open-Meteo returns these arrays index-aligned.
-    for iso, temp, prob, code in zip(times, temps, probs, codes, strict=True):
+    # Mismatched array lengths are a malformed body, not a silent truncation.
+    # zip(strict=True) would catch that, but it is Python 3.10+ and the deploy Pi
+    # runs 3.9 (DESIGN §5), so check the lengths explicitly and then plain-zip.
+    # Open-Meteo returns these arrays index-aligned.
+    if not (len(times) == len(temps) == len(probs) == len(codes)):
+        raise ValueError("hourly arrays have mismatched lengths")
+    for iso, temp, prob, code in zip(times, temps, probs, codes):
         when = datetime.fromisoformat(iso).replace(tzinfo=timezone.utc)
         # precipitation_probability is legitimately null for hours past the model's
         # probability horizon; those hours are never today, so a missing chance

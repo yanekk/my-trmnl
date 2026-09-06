@@ -31,6 +31,7 @@ from urllib.parse import quote
 import httpx
 
 from trmnl.adapters import google_auth
+from trmnl.adapters.isotime import from_iso
 from trmnl.core.model import WARSAW, Event, Failure
 
 log = logging.getLogger(__name__)
@@ -155,9 +156,12 @@ def _parse(payload: dict, first_day: date, last_day: date) -> list[Event]:
         start = item["start"]
         title = item.get("summary", _UNTITLED)
         if "dateTime" in start:
+            # Google stamps timed events with an offset ("+02:00") or "Z"; from_iso
+            # accepts both on Python 3.9 (stdlib fromisoformat only takes "Z" from
+            # 3.11 — the deploy Pi is 3.9, DESIGN §5).
             events.append(
                 Event(
-                    start=datetime.fromisoformat(start["dateTime"]),
+                    start=from_iso(start["dateTime"]),
                     title=title,
                     all_day=False,
                 )

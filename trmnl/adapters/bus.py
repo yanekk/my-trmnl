@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+from trmnl.adapters.isotime import from_iso
 from trmnl.core.model import Departure, Failure
 
 # The live per-pole departures feed. No key, no account (DESIGN §2.3). One HTTP
@@ -188,11 +189,12 @@ def _parse_pole(payload: dict, line: str) -> list[Departure]:
         short_name = str(row["routeShortName"])
         if short_name != line:
             continue
-        when = datetime.fromisoformat(row["estimatedTime"])
-        # The feed stamps ISO times with a trailing "Z", so fromisoformat returns
-        # a UTC-aware value on 3.11+. Guard the naive case anyway so a format
-        # without the offset is stamped UTC rather than leaking a naive datetime
+        # The feed stamps ISO times with a trailing "Z"; from_iso parses that on
+        # Python 3.9 too (stdlib fromisoformat only accepts "Z" from 3.11 — the
+        # deploy Pi is 3.9, DESIGN §5). Guard the naive case anyway so a format
+        # without an offset is stamped UTC rather than leaking a naive datetime
         # into the core, which compares it against a tz-aware `now`.
+        when = from_iso(row["estimatedTime"])
         if when.tzinfo is None:
             when = when.replace(tzinfo=timezone.utc)
         # Only an explicit REALTIME status is treated as GPS-tracked; anything else

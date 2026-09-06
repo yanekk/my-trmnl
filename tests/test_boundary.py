@@ -17,6 +17,10 @@ prove the guard actually bites, which is why no real core module ever has to be
 broken on purpose to demonstrate it.
 """
 
+# Keeps `X | Y` annotations valid on the deploy Pi's Python 3.9 (they only became
+# runtime-legal in 3.10), so the suite can also be run on the box (DESIGN §5).
+from __future__ import annotations
+
 import ast
 import pathlib
 
