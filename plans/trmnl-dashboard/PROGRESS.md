@@ -15,10 +15,10 @@ over-budget cell they walk past.
 
 **Status:** T07 reviewed clean. All three leaf adapters (weather, bus, calendar) done and
 reviewed; T00 and T07-OAuth hand-verified. 135 green. T08 (composition root, refresh loop,
-config, degradation) is unblocked and next. Owner decision pending for T08: multi-day all-day
-events currently vanish from today/tomorrow (see FINDINGS); untitled-event wording "(bez tytułu)"
-to confirm.
-**Last updated:** 2026-09-05
+config, degradation) is unblocked and next. Owner decided (2026-09-06): a multi-day all-day
+event must show on every day it covers (T08 implements, see FINDINGS); untitled-event wording
+"(bez tytułu)" confirmed.
+**Last updated:** 2026-09-06
 **Next `pir-work` will:** implement T08 (composition root, refresh loop, config, degradation).
 
 ## Tasks
