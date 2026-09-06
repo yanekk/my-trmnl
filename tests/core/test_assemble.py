@@ -218,23 +218,35 @@ def test_unknown_weather_code_falls_back_not_crashes():
     assert d.weather.icon == "cloud"
 
 
-def test_weather_hours_are_rest_of_today_localized_and_capped():
+def test_weather_hours_are_next_hours_localized_and_capped():
     now = utc(2026, 1, 15, 7, 30)  # 08:30 local (+1)
-    # Points at 07,08,...,23 UTC today plus one yesterday and one tomorrow.
+    # Points at 07,08,...,23 UTC today plus one earlier point that is already past.
     # code 61 = "Deszcz" -> icon "rain", so the per-hour icon can be asserted.
     hourly = [HourPoint(time=utc(2026, 1, 15, h), temp_c=h, rain_pct=h, code=61) for h in range(7, 24)]
     hourly.append(HourPoint(time=utc(2026, 1, 14, 23), temp_c=-1, rain_pct=0, code=61))
-    hourly.append(HourPoint(time=utc(2026, 1, 16, 6), temp_c=99, rain_pct=99, code=61))
     w = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, hourly=hourly)
     d = assemble(sources(weather=w), now)
     hours = d.weather.hours
-    # Only future same-local-day points, capped at 6. 08:00 UTC (09:00 local) is
-    # the first strictly after now; labels are local hours.
+    # The first WEATHER_HOURS points strictly after now, capped at 6. 08:00 UTC
+    # (09:00 local) is the first strictly after now; labels are local hours.
     assert len(hours) == 6
     assert hours[0].label == "09"  # 08:00 UTC -> 09:00 local
     assert hours[-1].label == "14"
-    assert all(h.temp_c < 99 for h in hours)  # tomorrow's point excluded
+    assert all(h.temp_c >= 0 for h in hours)  # the past point (temp -1) excluded
     assert all(h.icon == "rain" for h in hours)  # per-hour code 61 -> rain icon
+
+
+def test_weather_hours_roll_across_midnight():
+    # Late evening: today's hours run out, so the strip must continue into
+    # tomorrow's early hours rather than stopping at 23:00 (owner, 2026-09-06).
+    now = utc(2026, 1, 15, 20, 30)  # 21:30 local (+1)
+    hourly = [HourPoint(time=utc(2026, 1, 15, h), temp_c=h, rain_pct=0, code=0) for h in range(20, 24)]
+    hourly += [HourPoint(time=utc(2026, 1, 16, h), temp_c=h, rain_pct=0, code=0) for h in range(0, 6)]
+    w = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, hourly=hourly)
+    hours = assemble(sources(weather=w), now).weather.hours
+    # 22, 23 local today then 00, 01, 02, 03 local tomorrow.
+    assert len(hours) == 6
+    assert [h.label for h in hours] == ["22", "23", "00", "01", "02", "03"]
 
 
 def test_hourly_icon_maps_per_hour_code_with_fallback():

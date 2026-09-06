@@ -148,15 +148,16 @@ def _weather_view(w: WeatherData, now: datetime) -> WeatherView:
 
 
 def _weather_hours(hourly: list[HourPoint], now: datetime) -> list[HourView]:
-    """The rest of today's hours, localized and capped (DESIGN §2.2). Keeps the
-    points strictly after `now` that still fall on today's local calendar day,
-    sorted, up to WEATHER_HOURS. Near midnight this can be empty, which the
-    renderer handles as an empty strip."""
-    now_local = now.astimezone(WARSAW)
+    """The next WEATHER_HOURS hours from `now`, localized (DESIGN §2.2). Keeps the
+    points strictly after `now`, sorted, and takes the first WEATHER_HOURS — so the
+    strip rolls across midnight into tomorrow's early hours rather than shrinking to
+    nothing at end of day (owner, 2026-09-06). The fetch covers two days, so those
+    hours are always present; an empty strip means the fetch lacked future hours,
+    which the renderer draws as nothing."""
     rows: list[HourView] = []
     for pt in sorted(hourly, key=lambda p: p.time):
         local = pt.time.astimezone(WARSAW)
-        if pt.time > now and local.date() == now_local.date():
+        if pt.time > now:
             rows.append(
                 HourView(
                     label=local.strftime("%H"),

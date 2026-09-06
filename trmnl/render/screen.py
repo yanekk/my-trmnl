@@ -307,10 +307,10 @@ def _render_weather(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
 
 
 def _render_hours(draw: ImageDraw.ImageDraw, hours: list) -> None:
-    """The rest-of-today strip along the bottom of the weather box. Each column is
+    """The next-hours strip along the bottom of the weather box. Each column is
     stacked hour / icon / temperature / rain (owner, 2026-09-06). The core already
-    capped this to fit (WEATHER_HOURS), and near midnight it can be empty, which
-    draws nothing."""
+    capped this to fit (WEATHER_HOURS) and rolls it across midnight; an empty strip
+    (fetch lacked future hours) draws nothing."""
     if not hours:
         return
     strip_left = PAD

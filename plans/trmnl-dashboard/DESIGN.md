@@ -63,7 +63,9 @@ fills), never by a grey value, because a grey value does not exist on this hardw
 
 ### 2.2 Weather
 
-Current conditions and an hourly strip for the rest of today. The big current temperature and
+Current conditions and an hourly strip of the next WEATHER_HOURS hours. The strip rolls forward
+across midnight into tomorrow's early hours rather than shrinking to nothing at end of day
+(owner, 2026-09-06); the fetch covers two days so those hours are always present. The big current temperature and
 its condition word start on the same top line; feels-like and wind sit under the condition as
 one values-only line ("13° · 20 km/h"). There is no separate current-conditions icon (owner,
 2026-09-06). Below that, the hourly strip: each column is a compact stack of hour / icon /
