@@ -20,8 +20,10 @@ realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi 
 zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
 (`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
+This session: owner saw the hourly weather strip end at 23:00 on the device; fixed the core so
+it rolls the next 6 hours across midnight, deployed live (176 green Mac, 162 Pi). See FINDINGS.
 **Next `pir-work` will:** review T09 (deploy scripts + on-device outcome) once the owner has
-pointed the device at the Pi and done the reboot check.
+pointed the device at the Pi, re-checked the weather strip, and done the reboot check.
 
 ## Tasks
 
