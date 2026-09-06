@@ -262,9 +262,9 @@ Google consent flow completes, and that the refresh cadence feels right in the r
 
 | | |
 |---|---|
-| OS (deploy) | Linux on an always-on home box (Raspberry Pi, mini-PC or NAS). Assumed, confirm at T09. |
+| OS (deploy) | Raspberry Pi Model B Rev 2 (original, ARMv6), Raspbian 11 (bullseye), 32-bit — confirmed at T09 by SSH. The owner's Synology DS218j NAS was ruled out (32-bit ARM, Python 3.8, no pip, no Docker, 500 MB RAM). |
 | OS (dev) | macOS (Apple Silicon). |
-| Language / runtime | Python 3.12, run in Docker so the deploy box and the dev Mac use the same runtime. |
+| Language / runtime | Dev and the test command run Python 3.11+ in Docker. The Pi has no Docker (ARMv6) and runs the app **natively** on its system Python 3.9: Pillow from apt (prebuilt, no compiling), the pure-Python deps via pip in a `--system-site-packages` venv, tomli standing in for tomllib. The code therefore supports 3.9+ (requires-python `>=3.9`). |
 | Toolchain | Docker 28 present on dev Mac; Node present but not used for the product. |
 | **Deliberately absent** | No headless browser anywhere (deliberate, §7). ImageMagick not installed and not required — Pillow writes the BMP. System Python is 3.9 and is not used; 3.12 comes from the Docker image. |
 

@@ -7,7 +7,7 @@ name = "trmnl-dashboard"
 version = "0.1.0"
 description = "E-ink dashboard server for a Seeed Studio TRMNL device."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 
 # Runtime deps are pinned so the dev Mac and the deploy box run the same code,
 # which matters most for Pillow (the renderer is golden-tested at T03; a Pillow
@@ -22,6 +22,9 @@ dependencies = [
     # google-api-python-client discovery client is deliberately not a dependency.
     "google-auth==2.35.0",
     "google-auth-oauthlib==1.2.1",
+    # Pre-3.11 (the deploy Pi's Python 3.9) has no stdlib tomllib; tomli is the
+    # same API, pure-Python. On 3.11+ (dev, Docker) this is not installed.
+    "tomli==2.0.1; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]

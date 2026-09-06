@@ -5,9 +5,11 @@ stops, the line, the calendar ids, the service window, where the image is writte
 — lives in one TOML file on the box, not in the code. This module reads it,
 validates it, and hands the composition root (`server/loop.py`) a frozen `Config`.
 
-**Why TOML and the standard library.** Python 3.12 ships `tomllib`, so reading the
-file adds no dependency to pin on the box (DESIGN §5's dependency policy). The file
-is written by a person, so every field is validated on load with a message that
+**Why TOML.** Python 3.11+ ships `tomllib`, so on the dev machine and in Docker
+reading the file adds no dependency. The deploy Pi runs Python 3.9, which has no
+`tomllib`, so we fall back to `tomli` — the same API, pure-Python, no compiling
+(DESIGN §5). The file is written by a person, so every field is validated on load
+with a message that
 names the field and section, rather than failing deep inside a fetch with a
 `KeyError` (task T08: "Config is validated on load with clear errors").
 
@@ -20,7 +22,10 @@ the shape and ships in the repo.
 
 from __future__ import annotations
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python < 3.11 (the Pi's 3.9): tomli is the same API,
+    import tomli as tomllib  # pure-Python, so no compiling on the deploy box (T09)
 from dataclasses import dataclass
 from datetime import time
 from pathlib import Path

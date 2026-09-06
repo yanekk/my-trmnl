@@ -19,8 +19,10 @@ README deploy note. Several owner-directed render changes on 2026-09-06: diacrit
 except DZIŚ/JUTRO, no main icon, one-line "13° · 20 km/h", compact centred hourly stack, no bus
 separators), then bus labels driven by the feed's realtime/scheduled status (GPS → "za N min",
 schedule-only → clock), and the vehicle fleet number under each time ("—" when none; DESIGN §2.3).
-Design iterated on a local venv server (see FINDINGS); goldens regenerated, 171 green. On-device
-verification is the outstanding half and needs the owner + the physical device.
+Design iterated on a local venv server (see FINDINGS); goldens regenerated, 171 green.
+T09 deploy target chosen: a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9), native (no Docker on
+the box); NAS ruled out. Code made 3.9-compatible (tomli fallback, requires-python >=3.9).
+Next: install deps on the Pi, run as a systemd service, then on-device verification with the owner.
 **Last updated:** 2026-09-06
 **Next `pir-work` will:** review T09's deploy artifacts once the owner has confirmed on device.
 
