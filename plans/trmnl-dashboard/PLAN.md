@@ -89,6 +89,7 @@ no separate plan-review (the plan was already being built when these were added)
 | # | Task | Depends on |
 |---|---|---|
 | [T10](tasks/T10-vehicle-info.md) | Bus manufacturer + model before the fleet number, from the ZTM vehicle database (disk-cached, miss-triggered refetch) | T03, T06, T08 |
+| [T11](tasks/T11-night-icons.md) | Moon icons at night — day/night-aware weather icons (Open-Meteo `is_day`; sun→moon, part-cloud→moon-behind-cloud; other icons unchanged) | T02, T03, T05 |
 
 ---
 

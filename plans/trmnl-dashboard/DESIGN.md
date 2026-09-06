@@ -73,8 +73,16 @@ temperature / rain, packed tightly and centred vertically in the space below the
 conditions; the columns stay evenly spread across the panel width (owner, 2026-09-06). The icon
 replaced an earlier bar whose height only re-encoded the temperature already printed, and it
 uses the same WMO-code → icon-key mapping as the current conditions, so the fetch asks for a
-per-hour weather_code. Source is Open-Meteo, chosen because it needs no account or API key and
-covers Gdańsk with hourly data — a key to rotate is one more thing to break on a home box.
+per-hour weather_code. The icon is day/night aware (T11, owner 2026-09-06): a clear sky draws a
+sun by day and a crescent moon after dark, and a mostly/partly-clear sky a sun-behind-cloud by
+day and a moon-behind-cloud by night; every other icon (cloud, fog, drizzle, rain, snow, storm)
+is identical day and night, because only the clear icons read wrong at night and night variants of
+the rest earn nothing. The day/night flag is Open-Meteo's per-hour `is_day`, fetched alongside the
+code; each strip hour uses its own flag, so the pre-dawn and post-sunset hours show a moon while
+the daytime hours show a sun. A missing flag falls back to day (the sun), never a failure. The
+decision is made in the pure core from the code plus the flag; the renderer only draws the
+resolved icon and holds no clock. Source is Open-Meteo, chosen because it needs no account or API
+key and covers Gdańsk with hourly data — a key to rotate is one more thing to break on a home box.
 Location is a fixed coordinate for Gdańsk, set in config.
 
 ### 2.3 Buses
@@ -406,6 +414,16 @@ Google account settings; the calendar region then shows "unavailable" until re-a
   to fall back on. The owner chose shipping a fixed "starting up" image the server serves
   instantly over making the device wait a refresh cycle for its first picture. It is shown only
   until the first real image is built, then never again.
+- **2026-09-06 (T11) — Weather icons show a moon at night, not a sun.** The owner saw a sun on
+  the hourly strip after sunset. Open-Meteo already carries a per-hour day/night flag (`is_day`),
+  verified present on this machine, so the fix costs one extra request field and two line-art
+  glyphs. Scoped to the two icons that read wrong at night — clear (`sun`→`moon`) and
+  mostly/partly-clear (`part-cloud`→moon-behind-cloud); rain, snow, cloud, fog and storm are left
+  identical day and night because a night variant of each is glyph work for no visible gain. The
+  decision lives in the pure core (code + flag → key) so it stays golden-testable; the renderer
+  gains only the glyphs. Only the strip is drawn today — the big current-conditions icon was
+  removed 2026-09-06 — but the core function is made day/night aware uniformly so the value is
+  correct if a big icon ever returns.
 
 ---
 
