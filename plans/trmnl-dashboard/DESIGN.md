@@ -45,6 +45,11 @@ time, metric units. Layout, top to bottom: weather top-left, buses top-right, ca
 the bottom. The approved mock in `prototype/mock.html` is the non-binding reference for
 proportion and density; the real renderer is designed fresh against it, not copied from it.
 
+The region titles (POGODA / ODJAZDY / KALENDARZ) were dropped in a less-verbose pass (owner,
+2026-09-06): each region reads clearly from its content and position, so the labels were pure
+overhead. The calendar's DZIŚ / JUTRO day headers stay — they carry the date and say which
+column is which. Only the dividing rules and the content remain.
+
 There is deliberately no top bar carrying a clock, a date or a "last updated" time (§7). The
 screen only redraws when the device wakes, so a clock would freeze between wakes — accurate to
 the minute during the day but up to ~30 minutes behind overnight — and a wall clock that can
@@ -58,14 +63,17 @@ fills), never by a grey value, because a grey value does not exist on this hardw
 
 ### 2.2 Weather
 
-Current conditions (temperature, a condition word, feels-like, wind) plus an hourly strip for
-the rest of today. Each hour shows its temperature, an icon of the expected weather, the rain
-chance and the hour (owner decision 2026-09-06: the icon replaced an earlier bar whose height
-only re-encoded the temperature already printed). The per-hour icon uses the same WMO-code →
-icon-key mapping as the current conditions, so it needs a per-hour weather_code from the fetch.
-Source is Open-Meteo, chosen because it needs no account or API key and covers Gdańsk with
-hourly data — a key to rotate is one more thing to break on a home box. Location is a fixed
-coordinate for Gdańsk, set in config.
+Current conditions and an hourly strip for the rest of today. The big current temperature and
+its condition word start on the same top line; feels-like and wind sit under the condition as
+one values-only line ("13° · 20 km/h"). There is no separate current-conditions icon (owner,
+2026-09-06). Below that, the hourly strip: each column is a compact stack of hour / icon /
+temperature / rain, packed tightly and centred vertically in the space below the current
+conditions; the columns stay evenly spread across the panel width (owner, 2026-09-06). The icon
+replaced an earlier bar whose height only re-encoded the temperature already printed, and it
+uses the same WMO-code → icon-key mapping as the current conditions, so the fetch asks for a
+per-hour weather_code. Source is Open-Meteo, chosen because it needs no account or API key and
+covers Gdańsk with hourly data — a key to rotate is one more thing to break on a home box.
+Location is a fixed coordinate for Gdańsk, set in config.
 
 ### 2.3 Buses
 
@@ -73,7 +81,8 @@ A single chronological list of the next departures for one line (default 227) fr
 stops, each row showing line number, destination (headsign), and time. Imminent departures
 show as "za N min"; later ones show a clock time. The list mixes both directions/stops and is
 sorted by time, because the owner wants "what leaves next", not a per-stop board. This simpler
-list replaced an earlier per-stop boxed layout at the owner's request (§7).
+list replaced an earlier per-stop boxed layout at the owner's request (§7). Rows have no
+separator rule between them (owner, 2026-09-06); the whitespace is enough.
 
 Source is the Gdańsk open-data live departures endpoint
 `https://ckan2.multimediagdansk.pl/departures?stopId={stopId}`, which fuses schedule and

@@ -15,3 +15,7 @@ config.toml
 # The OAuth refresh token copied onto the box for the Docker mount (DESIGN §3.5).
 # A live credential — never commit it.
 token.json
+
+# Local (non-Docker) iteration: venv-run server config and its output dir.
+config.local.toml
+.local/

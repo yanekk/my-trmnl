@@ -172,23 +172,14 @@ def _hatch_rect(
         i += spacing
 
 
-def _region_label(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], text: str) -> int:
-    """Draw a region's uppercase title at its top-left and return the y at which
-    content below it may start."""
-    x0, y0, _, _ = box
-    font = _font(_SANS_SB, 15)
-    _tracked(draw, x0 + PAD, y0 + PAD, text, font, tracking=2.0)
-    return y0 + PAD + 22
-
-
-def _draw_unavailable(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], label: str) -> None:
-    """A source is down: its region shows only the title and a centred
-    "niedostępne", visually distinct from an available-but-empty region
-    (DESIGN §2.6)."""
-    _region_label(draw, box, label)
+def _draw_unavailable(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    """A source is down: its region shows a centred "niedostępne", visually
+    distinct from an available-but-empty region which draws its short empty line
+    (DESIGN §2.6). Region titles were dropped (owner, 2026-09-06), so this is the
+    whole of a down region."""
     x0, y0, x1, y1 = box
     cx = (x0 + x1) // 2
-    cy = (y0 + y1) // 2 + 8
+    cy = (y0 + y1) // 2
     draw.text((cx, cy), _UNAVAILABLE, font=_font(_SANS, 22), fill=BLACK, anchor="mm")
 
 
@@ -285,75 +276,84 @@ def _draw_icon(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int, key: str) -> No
 # --- weather region ---------------------------------------------------------
 
 
-def _render_weather(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> None:
+def _render_weather(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
     if not dash.weather_region.available or dash.weather is None:
-        _draw_unavailable(draw, WEATHER_BOX, label)
+        _draw_unavailable(draw, WEATHER_BOX)
         return
 
-    _region_label(draw, WEATHER_BOX, label)
     w = dash.weather
 
-    # Icon top-right of the region.
-    _draw_icon(draw, LEFT_W - PAD - 30, PAD + 44, 26, w.icon)
-
-    # Big current temperature, top-left under the label.
+    # No region title and no big icon anymore (owner, 2026-09-06). The big current
+    # temperature and its condition word start on the same top line.
+    top = PAD + 4
     temp_font = _font(_SANS_SB, 82)
     temp_text = f"{w.temp_c}°"
-    draw.text((PAD, 46), temp_text, font=temp_font, fill=BLACK, anchor="lt")
+    draw.text((PAD, top), temp_text, font=temp_font, fill=BLACK, anchor="lt")
     temp_w = _text_width(temp_text, temp_font)
 
-    # Condition word and the two meta lines, to the right of the temperature.
-    side_x = int(PAD + temp_w + 22)
-    draw.text((side_x, 58), w.condition, font=_font(_SANS_SB, 24), fill=BLACK, anchor="lt")
-    meta = _font(_SANS, 18)
-    draw.text((side_x, 92), f"odczuwalna {w.feels_like_c}°", font=meta, fill=BLACK, anchor="lt")
-    draw.text((side_x, 116), f"wiatr {w.wind_kmh} km/h", font=meta, fill=BLACK, anchor="lt")
+    side_x = int(PAD + temp_w + 20)
+    cond = _ellipsize(w.condition, _font(_SANS_SB, 24), LEFT_W - PAD - side_x)
+    draw.text((side_x, top), cond, font=_font(_SANS_SB, 24), fill=BLACK, anchor="lt")
+    # Feels-like and wind on one values-only line: "13° · 20 km/h".
+    draw.text(
+        (side_x, top + 34),
+        f"{w.feels_like_c}° · {w.wind_kmh} km/h",
+        font=_font(_SANS, 18),
+        fill=BLACK,
+        anchor="lt",
+    )
 
     _render_hours(draw, w.hours)
 
 
 def _render_hours(draw: ImageDraw.ImageDraw, hours: list) -> None:
-    """The rest-of-today strip along the bottom of the weather box: per hour a
-    temperature, a small icon of that hour's expected weather, the rain chance and
-    the hour. The icon replaced an earlier hatched bar that only re-encoded the
-    temperature already printed above it. The core already capped this to fit
-    (WEATHER_HOURS), and near midnight it can be empty, which draws nothing."""
+    """The rest-of-today strip along the bottom of the weather box. Each column is
+    stacked hour / icon / temperature / rain (owner, 2026-09-06). The core already
+    capped this to fit (WEATHER_HOURS), and near midnight it can be empty, which
+    draws nothing."""
     if not hours:
         return
-    strip_top = 150
     strip_left = PAD
     strip_right = LEFT_W - PAD
     col_w = (strip_right - strip_left) // 6  # fixed 6-slot grid so 1..6 align left
 
-    mono_h = _font(_MONO, 15)
+    hour_f = _font(_MONO, 15)
     temp_f = _font(_SANS_SB, 19)
+    rain_f = _font(_MONO, 14)
 
-    icon_cy = strip_top + 44   # icon centre; leaves room for the temp above it
-    icon_r = 13                # small enough that rain/snow/storm extras stay in-box
+    # A compact stack, each element close to the next (owner, 2026-09-06). Offsets
+    # are from the block top; the whole block is then centred vertically in the
+    # space below the current-conditions block. Icons stay prominent (r=20) but the
+    # column is packed rather than spread.
+    icon_r = 20
+    OFF_HOUR, OFF_ICON, OFF_TEMP, OFF_RAIN, BLOCK_H = 0, 34, 56, 78, 92
+    region_top = 104
+    region_bottom = TOP_H - PAD
+    y0 = region_top + (region_bottom - region_top - BLOCK_H) // 2
+
     for i, h in enumerate(hours):
         cx = strip_left + col_w * i + col_w // 2
-        draw.text((cx, strip_top), f"{h.temp_c}°", font=temp_f, fill=BLACK, anchor="mt")
-        _draw_icon(draw, cx, icon_cy, icon_r, h.icon)
-        draw.text((cx, strip_top + 64), f"{h.rain_pct}%", font=mono_h, fill=BLACK, anchor="mt")
-        draw.text((cx, strip_top + 84), h.label, font=mono_h, fill=BLACK, anchor="mt")
+        draw.text((cx, y0 + OFF_HOUR), h.label, font=hour_f, fill=BLACK, anchor="mt")
+        _draw_icon(draw, cx, y0 + OFF_ICON, icon_r, h.icon)
+        draw.text((cx, y0 + OFF_TEMP), f"{h.temp_c}°", font=temp_f, fill=BLACK, anchor="mt")
+        draw.text((cx, y0 + OFF_RAIN), f"{h.rain_pct}%", font=rain_f, fill=BLACK, anchor="mt")
 
 
 # --- buses region -----------------------------------------------------------
 
 
-def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> None:
+def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
     if not dash.buses_region.available:
-        _draw_unavailable(draw, BUSES_BOX, label)
+        _draw_unavailable(draw, BUSES_BOX)
         _render_attribution(draw, dash)
         return
 
-    content_top = _region_label(draw, BUSES_BOX, label)
     left = LEFT_W + PAD
     right = WIDTH - PAD
 
     if not dash.buses:
         cx = (LEFT_W + WIDTH) // 2
-        cy = (0 + TOP_H) // 2 + 8
+        cy = (0 + TOP_H) // 2
         draw.text((cx, cy), _NO_DEPARTURES, font=_font(_SANS, 20), fill=BLACK, anchor="mm")
         _render_attribution(draw, dash)
         return
@@ -362,13 +362,12 @@ def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> Non
     dest_f = _font(_SANS, 18)
     time_f = _font(_MONO_SB, 20)
 
-    # Reserve the strip above the attribution for the rows.
+    # No region title now, so rows start at the top of the box. No separator
+    # between rows (owner, 2026-09-06). Reserve the strip above the attribution.
     rows_bottom = TOP_H - PAD - 20
     row_h = 34
-    y = content_top + 4
-    for idx, row in enumerate(dash.buses):
-        if idx > 0:
-            _dotted_hline(draw, left, right, y - 4)
+    y = PAD + 4
+    for row in dash.buses:
         line_w = _text_width(row.line, line_f)
         draw.text((left, y), row.line, font=line_f, fill=BLACK, anchor="lt")
         # time, right-aligned; headsign fills the gap and is ellipsised to fit
@@ -401,15 +400,14 @@ def _render_attribution(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
 # --- calendar region --------------------------------------------------------
 
 
-def _render_calendar(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> None:
+def _render_calendar(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
     if not dash.calendar_region.available:
-        _draw_unavailable(draw, CAL_BOX, label)
+        _draw_unavailable(draw, CAL_BOX)
         return
 
-    _region_label(draw, CAL_BOX, label)
-
-    # Two day columns with a hairline between them.
-    col_top = TOP_H + PAD + 26
+    # No KALENDARZ title (owner, 2026-09-06); the DZIŚ/JUTRO day headers stay and
+    # move up to the top of the region.
+    col_top = TOP_H + PAD + 4
     mid = WIDTH // 2
     draw.line([(mid, col_top - 6), (mid, HEIGHT - PAD)], fill=BLACK, width=1)
 
@@ -518,16 +516,16 @@ def render(dashboard: Dashboard, labels: RegionLabels | None = None) -> Image.Im
     """Draw the whole dashboard to an 800×480 1-bit image (DESIGN §2.1). Pure of
     clock and network; deterministic, so it is golden-tested (DESIGN §3.1).
 
-    `labels` supplies the three region titles; when omitted the plain Polish
-    defaults are used (so the goldens, which pass no labels, are unaffected). The
-    composition root (T08) passes config-suffixed titles from the config file."""
-    labels = labels or RegionLabels()
+    `labels` is retained for interface and config compatibility but is no longer
+    drawn: the region titles (POGODA/ODJAZDY/KALENDARZ) were removed to cut
+    verbosity (owner, 2026-09-06). The calendar's DZIŚ/JUTRO day headers stay."""
+    _ = labels
     img = Image.new("1", (WIDTH, HEIGHT), WHITE)
     draw = ImageDraw.Draw(img)
     _dividers(draw)
-    _render_weather(draw, dashboard, labels.weather)
-    _render_buses(draw, dashboard, labels.buses)
-    _render_calendar(draw, dashboard, labels.calendar)
+    _render_weather(draw, dashboard)
+    _render_buses(draw, dashboard)
+    _render_calendar(draw, dashboard)
     return img
 
 
