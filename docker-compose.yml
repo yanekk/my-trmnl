@@ -1,33 +1,7 @@
-# Two services on one image:
-#   docker compose run --rm test      → the canonical test runner (DESIGN §5)
-#   docker compose up -d              → the dashboard server (T09 deploy)
-#
-# `test` sits under a profile so `up -d` starts only the dashboard; `run` enables
-# a target service's own profile, so the test command above is unaffected.
+# The canonical test runner (DESIGN §5): `docker compose run --rm test`.
+# Docker is the dev/test runtime only. The deploy box (a Raspberry Pi, ARMv6) has
+# no Docker and runs the server natively — see deploy/ and README "Deploying".
 services:
   test:
-    profiles: ["test"]
     build: .
     command: python -m pytest -q --color=no
-
-  # The production server for the always-on box (DESIGN §5.1, §5.2, §6, task T09).
-  # Reads /config/config.toml, writes and serves the screen from the trmnl-data
-  # volume, and binds the LAN. `restart: always` brings it back on failure and on
-  # boot, so the device self-heals when the box returns (DESIGN §6).
-  dashboard:
-    build: .
-    command: python -m trmnl.server.loop /config/config.toml
-    restart: always
-    ports:
-      - "8080:8080"
-    volumes:
-      # The household's real config and OAuth token, provided on the box next to
-      # this file. Both read-only; the token stays 0o600 on the host (DESIGN §3.5).
-      - ./config.toml:/config/config.toml:ro
-      - ./token.json:/config/token.json:ro
-      # Where the refresh loop writes the served BMP; a named volume so the last
-      # image survives a restart and is served immediately on recovery (DESIGN §6).
-      - trmnl-data:/data
-
-volumes:
-  trmnl-data:

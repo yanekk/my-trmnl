@@ -1,0 +1,28 @@
+# systemd unit for the dashboard server (DESIGN §5.1, §6). Installed by
+# deploy/install.sh, which substitutes __USER__ and __APP_DIR__ for the real
+# values on the target. Runs the app natively (the deploy box has no Docker).
+[Unit]
+Description=TRMNL e-ink dashboard server
+# Wait for the network so the first fetch has DNS; the loop tolerates a miss
+# anyway (a failed source just degrades its region).
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__APP_DIR__
+# HOME so config paths written with a leading ~ (token, image) expand correctly.
+Environment=HOME=/home/__USER__
+ExecStart=__APP_DIR__/.venv/bin/python -m trmnl.server.loop __APP_DIR__/config.toml
+# Come back on failure and on boot, so the device self-heals when the box returns
+# (DESIGN §6).
+Restart=always
+RestartSec=5
+# Guardrail on a small box: if the process ever balloons, systemd restarts it
+# rather than letting it take the machine down. Tuned from the measured render
+# footprint; raise it if the log shows OOM kills.
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

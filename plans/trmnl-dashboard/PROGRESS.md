@@ -13,18 +13,14 @@ over-budget cell they walk past.
 **Plan reviewed:** 2026-09-05 — clean of mechanical defects; 3 decisions taken with the owner
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
-**Status:** T09 build half done: production `dashboard` compose service (`restart: always`) +
-README deploy note. Several owner-directed render changes on 2026-09-06: diacritics fixed
-(`_tracked` baseline), hourly weather icons, then a less-verbose pass (region titles removed
-except DZIŚ/JUTRO, no main icon, one-line "13° · 20 km/h", compact centred hourly stack, no bus
-separators), then bus labels driven by the feed's realtime/scheduled status (GPS → "za N min",
-schedule-only → clock), and the vehicle fleet number under each time ("—" when none; DESIGN §2.3).
-Design iterated on a local venv server (see FINDINGS); goldens regenerated, 171 green.
-T09 deploy target chosen: a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9), native (no Docker on
-the box); NAS ruled out. Code made 3.9-compatible (tomli fallback, requires-python >=3.9).
-Next: install deps on the Pi, run as a systemd service, then on-device verification with the owner.
+**Status:** T09 deployed on the Pi and running. `deploy/deploy.sh pi@<ip>` sets up a native
+systemd service (no Docker on ARMv6); it serves `:8080` with all three sources live, verified
+over HTTP. Owner render changes this session (diacritics, hourly icons, less-verbose layout,
+realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi (tomli,
+zip(strict), fromisoformat "Z"). 175 green on Docker 3.12, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
-**Next `pir-work` will:** review T09's deploy artifacts once the owner has confirmed on device.
+**Next `pir-work` will:** review T09 (deploy scripts + on-device outcome) once the owner has
+pointed the device at the Pi and done the reboot check.
 
 ## Tasks
 
@@ -42,10 +38,10 @@ done · ⛔ blocked, needs a human.
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean. Per-pole isolation tested (dead pole → others render; all-fail → Failure). A malformed 227 row drops its whole pole; poles fetched serially, 10s each. |
 | T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean. OAuth consent hand-verified by owner 2026-09-05 (FINDINGS). Multi-day all-day gap handed to T08. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix commit. 168 green. Probed past the doc: every wiring signature (adapters, App, make_server) matches the real callee, not just the loop stubs; UTC `_clock` is converted to Warsaw in `refresh_seconds`; each source bounded by its httpx timeout; `os.replace` keeps the image atomic; multi-day span clips exclusive `[d0,d_end)` to today/tomorrow. Three deviations authorized. |
-| T09 | Deploy on home box + on-device verification | T08 | 🟡 | Build half done: `dashboard` service in docker-compose.yml (`restart: always`, port 8080, `/config` + `trmnl-data` mounts), README deploy note, 168 green. Outstanding half needs the owner on the device: cadence, live data, attribution, reboot recovery. Handover raised; awaiting owner. |
+| T09 | Deploy on home box + on-device verification | T08 | 🟡 | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`, all three sources verified live over HTTP. Docker deploy dropped (NAS/Pi have none). Outstanding, owner on the device: point the TRMNL at the Pi, judge cadence, confirm reboot recovery. |
 
-**Review queue:** empty. T09 is 🟡 — its deploy artifacts are built; the on-device
-verification with the owner is outstanding before it can be reviewed and closed.
+**Review queue:** empty. T09 is 🟡 — deployed and serving on the Pi; the on-device
+verification with the owner (point the device, reboot check) is outstanding before it closes.
 
 ## Blocked on the user
 

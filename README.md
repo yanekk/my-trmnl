@@ -24,41 +24,47 @@ pip install -e ".[test]"
 python -m pytest -q --color=no
 ```
 
-## Deploying on the box
+## Deploying to the box
 
-The server runs as a Docker service on the always-on home box, on the same LAN as
-the device (DESIGN §5.2 — it is never exposed to the internet). Put three files in
-one directory on the box, next to `docker-compose.yml`:
+The always-on box is a Raspberry Pi on the same LAN as the device (never exposed to
+the internet — DESIGN §5.2). The Pi has no Docker, so the server runs **natively**
+as a systemd service; Docker is only the dev/test runtime (above). One command from
+a dev machine deploys or updates it.
+
+First, in the repo root (both git-ignored, so they never get committed):
 
 - `config.toml` — copied from [`config.example.toml`](config.example.toml) and
-  filled in with the household's coordinates, stops, line and calendar id. For the
-  Docker deploy, set the two paths to where the compose file mounts them:
+  filled in with the household's coordinates, stops, line and calendar id. Leave the
+  paths using `~` (they resolve to the deploy user's home on the box):
 
   ```toml
   [calendar]
-  token_path = "/config/token.json"
+  token_path = "~/.config/trmnl/token.json"
 
   [server]
-  image_path = "/data/screen.bmp"
+  image_path = "~/trmnl-dashboard/screen.bmp"
   ```
 
-- `token.json` — the OAuth refresh token minted by the one-time consent on the dev
-  Mac (DESIGN §3.5). Copy it across; it is portable, so no second consent is
-  needed. Keep it readable only by the deploy user (`chmod 600 token.json`).
+- `token.json` — the OAuth refresh token from the one-time consent on the dev Mac
+  (DESIGN §3.5). It is portable, so no second consent is needed.
 
-- `docker-compose.yml` — from this repo, unchanged.
-
-Then, on the box:
+Then:
 
 ```
-docker compose up -d          # builds the image and starts the dashboard
-docker compose logs -f        # first line prints the LAN URL it serves on
+deploy/deploy.sh pi@<box-ip>        # e.g. deploy/deploy.sh pi@192.168.0.185
 ```
 
-Point the TRMNL at `http://<box-lan-ip>:8080` via its wifi captive portal (as in
-the T00 spike — resettable, DESIGN §6). The service is `restart: always`, so it
-comes back on failure and after a reboot; the device keeps its last screen while
-the server is down and self-heals when it returns.
+This rsyncs the code, copies the two secrets over the same SSH key, then runs
+`deploy/install.sh` on the box: it installs the system Pillow and a venv from `apt`,
+the pure-Python deps with `pip`, and a `trmnl-dashboard` systemd service. The
+service is `Restart=always` and enabled at boot, so it comes back on failure and
+after a reboot; the device keeps its last screen while the server is down and
+self-heals when it returns (DESIGN §6). Re-run `deploy/deploy.sh` any time to
+update — it is idempotent.
+
+Point the TRMNL at `http://<box-ip>:8080` via its wifi captive portal (as in the
+T00 spike — resettable, DESIGN §6). Check the service on the box with
+`systemctl status trmnl-dashboard` and `journalctl -u trmnl-dashboard -f`.
 
 ## Layout
 

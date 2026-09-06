@@ -1,0 +1,13 @@
+# Runtime dependencies for the native Pi deploy (DESIGN §5).
+#
+# Pillow is deliberately NOT here: on the Pi it comes from apt (python3-pil,
+# prebuilt for ARM) so nothing has to compile on a slow, memory-tight board. The
+# venv is created with --system-site-packages so it sees that system Pillow.
+#
+# These pins match pyproject.toml. requests (used by google-auth's token-refresh
+# transport) is pulled in transitively by google-auth-oauthlib, same as in
+# pyproject — not listed here for the same reason.
+httpx==0.28.1
+google-auth==2.35.0
+google-auth-oauthlib==1.2.1
+tomli==2.0.1
