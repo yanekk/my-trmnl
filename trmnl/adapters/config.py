@@ -51,7 +51,7 @@ class Config:
     calendar_ids: list[str]
     token_path: str  # the OAuth refresh-token file (google_auth), 0o600 on the box
     service_start: time  # Europe/Warsaw; drives the refresh policy (whole hours)
-    service_end: time
+    service_end: time  # 00:00 means midnight (end-of-day), i.e. service runs until 24:00
     image_path: str  # where the refresh loop writes the served BMP (atomic rename)
     startup_path: str  # the committed cold-start placeholder BMP the server falls back to
     place: str  # weather heading suffix, e.g. "Gdańsk"
@@ -102,9 +102,15 @@ def load_config(path: str | Path) -> Config:
 
     service_start = _hour(service, "service", "start")
     service_end = _hour(service, "service", "end")
-    if service_start >= service_end:
+    # end == 00:00 means the window runs to midnight (end-of-day); it is the one
+    # end value allowed to sort "before" start, because a window ending at 00:00
+    # can only mean midnight, never start-of-day. Every other end must be strictly
+    # after start. The window still never *crosses* midnight — it may only end at
+    # it (loop.py maps this 00:00 end to hour 24 for the refresh policy).
+    if service_end != time(0, 0) and service_start >= service_end:
         raise ConfigError(
             "config: [service] start must be before end and not cross midnight "
+            "(end may be 00:00 to run until midnight) "
             f"(got start={service_start:%H:%M}, end={service_end:%H:%M})"
         )
 

@@ -153,6 +153,14 @@ def test_service_end_before_start_is_rejected(tmp_path):
         load_config(_write(tmp_path, text))
 
 
+def test_service_end_midnight_is_accepted(tmp_path):
+    # end = "00:00" is the one end allowed to sort before start: it means the
+    # service window runs to midnight (loop.py maps it to hour 24).
+    text = _VALID.replace('end = "23:00"', 'end = "00:00"')
+    cfg = load_config(_write(tmp_path, text))
+    assert cfg.service_end == time(0, 0)
+
+
 def test_bad_time_string_is_rejected(tmp_path):
     text = _VALID.replace('start = "05:00"', 'start = "notatime"')
     with pytest.raises(ConfigError, match="not a valid"):

@@ -16,7 +16,7 @@ the server produces.
 
 - The device shows our three-region dashboard, refreshed automatically, with no manual step
   after first setup.
-- Bus times on screen are live (include real delays) and at most about a minute stale during
+- Bus times on screen are live (include real delays) and at most about two minutes stale during
   service hours.
 - Weather, buses and calendar each show correct current data for Gdańsk / the owner's calendar.
 - When one data source is down, its region says so and the other two keep working.
@@ -105,7 +105,7 @@ from the daily `stops.json` dataset by name and cached. Times are UTC and are co
 Europe/Warsaw for display.
 
 The feed is cached about 20 seconds per stop upstream, so polling faster than that gains
-nothing; our ~60s refresh is well within it. The legacy `/delays` endpoint is dead (404) and
+nothing; our ~120s refresh is well within it. The legacy `/delays` endpoint is dead (404) and
 must not be used.
 
 Attribution is required: the data is CC-BY 4.0, so the screen carries a small credit to
@@ -134,16 +134,18 @@ in the `/api/display` response. In BYOS mode the firmware obeys whatever we retu
 no manufacturer floor (verified in firmware source; the "5/15 minute" limits are cloud-account
 limits that do not apply to our own server).
 
-Policy: return 60 seconds during bus service hours and a long interval (e.g. 1800 s) overnight.
+Policy: return 120 seconds during bus service hours and a long interval (e.g. 1800 s) overnight.
 The reasons: the device is plugged into mains, so frequent wakes cost no battery; a full wake
-cycle takes about 10.5 seconds and every wake flashes the whole screen once, so 60s is the
-fastest interval that keeps bus times under a minute stale without the screen flashing
-near-continuously; overnight nobody is watching, so slowing down avoids needless flashing and
+cycle takes about 10.5 seconds and every wake flashes the whole screen once, so 120s keeps bus
+times under two minutes stale while halving the flash rate of a once-a-minute wake (owner,
+2026-09-06); overnight nobody is watching, so slowing down avoids needless flashing and
 unquantified panel wear. The device is deep-sleep-only even on mains — there is no live/always-on
 mode — so "as fresh as possible" means "wakes often", bounded by the ~10.5s cycle.
 
 The refresh interval is a pure function of the current time (service-hours window in config),
-so it is decided in the core and tested without a clock.
+so it is decided in the core and tested without a clock. The window is whole hours and does not
+cross midnight, but its end may be 00:00, meaning it runs until midnight (mapped to hour 24); the
+configured window is 06:00–00:00, so the slow overnight window is 00:00–06:00 (owner, 2026-09-06).
 
 ### 2.6 The unhappy paths
 
@@ -357,6 +359,12 @@ Google account settings; the calendar region then shows "unavailable" until re-a
   in BYOS; mains power removes the battery cost; 60s balances freshness against the once-a-minute
   screen flash; overnight slowdown avoids needless flashing and wear. Tunable if the flash
   annoys in the room.
+- **2026-09-06 — Service refresh raised 60s → 120s.** Owner judged the once-a-minute flash too
+  frequent in the room; two minutes halves the flashing and still keeps bus times under two
+  minutes stale. Overnight 1800s unchanged.
+- **2026-09-06 — Overnight (slow) window set to 00:00–06:00.** Owner's choice; fast now runs
+  06:00 until midnight. Needed the service window to end at midnight, so end=00:00 is allowed as
+  a special "runs to midnight" value (mapped to hour 24), the one end that may sort before start.
 - **2026-09-05 — Live departures JSON endpoint, not GTFS-RT.** For one stop and one line the
   `departures` endpoint already fuses schedule and realtime with human-readable fields; GTFS-RT
   would add protobuf and a static-GTFS join for no gain at this scope.

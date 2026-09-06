@@ -238,6 +238,12 @@ def test_service_hours_takes_the_hour_of_each_bound(tmp_path):
     assert loop.service_hours(cfg) == ServiceHours(start_hour=5, end_hour=23)
 
 
+def test_service_hours_maps_midnight_end_to_hour_24(tmp_path):
+    # A 00:00 end means the window runs to midnight, not an empty [start, 0).
+    cfg = _config(tmp_path, service_start=time(6, 0), service_end=time(0, 0))
+    assert loop.service_hours(cfg) == ServiceHours(start_hour=6, end_hour=24)
+
+
 # --- the loop drives itself from the injected clock, no real sleep ----------
 
 
@@ -273,9 +279,9 @@ def test_run_loop_calls_build_once_each_tick_with_the_injected_clock(tmp_path, m
     )
 
     assert built_with == ticks
-    # The cadence is the same refresh policy the device gets: 60s in service, 1800s
+    # The cadence is the same refresh policy the device gets: 120s in service, 1800s
     # overnight — so the served image is never more than one interval stale.
-    assert slept == [60, 60, 1800]
+    assert slept == [120, 120, 1800]
 
 
 def test_run_loop_survives_a_crashing_cycle(tmp_path, monkeypatch):

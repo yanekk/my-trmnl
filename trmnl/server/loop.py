@@ -18,8 +18,8 @@ world-facing side, so it reads the system clock and passes `now` into the pure
 core and refresh policy. `build_once` and `run_loop` take `now`/`clock` as
 arguments, so the whole loop is testable with a fixed clock and no real sleep.
 
-**Cadence.** The loop rebuilds as often as the fastest device refresh — 60s during
-service hours, slower overnight — reusing the same refresh policy the server
+**Cadence.** The loop rebuilds as often as the fastest device refresh — 120s (2 min)
+during service hours, slower overnight — reusing the same refresh policy the server
 reports to the device (`core/refresh.py`), so the served image is never more than
 one interval stale (DESIGN §2.5).
 """
@@ -33,7 +33,7 @@ import threading
 import time as _time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from typing import Callable
 
 import httpx
@@ -183,8 +183,11 @@ def region_labels(cfg: Config) -> RegionLabels:
 
 def service_hours(cfg: Config) -> ServiceHours:
     """The service window as whole hours for the refresh policy (`core/refresh.py`
-    keys on the hour). The config loader guarantees whole hours and start < end."""
-    return ServiceHours(start_hour=cfg.service_start.hour, end_hour=cfg.service_end.hour)
+    keys on the hour). The config loader guarantees whole hours and a valid window.
+    A 00:00 end means midnight (end-of-day), so it maps to hour 24 — otherwise the
+    policy's `start_hour <= hour < end_hour` would read [start, 0) as empty."""
+    end_hour = 24 if cfg.service_end == time(0, 0) else cfg.service_end.hour
+    return ServiceHours(start_hour=cfg.service_start.hour, end_hour=end_hour)
 
 
 # --- the loop ---------------------------------------------------------------

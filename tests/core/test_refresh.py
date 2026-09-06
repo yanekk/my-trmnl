@@ -1,4 +1,4 @@
-"""refresh_seconds policy (DESIGN §2.5): 60 in service hours, 1800 outside, with
+"""refresh_seconds policy (DESIGN §2.5): 120 in service hours, 1800 outside, with
 the window compared in Europe/Warsaw and the edges tested explicitly."""
 
 from datetime import datetime, timezone
@@ -45,3 +45,23 @@ def test_window_is_compared_in_warsaw_not_utc():
     # UTC hour (4) is outside it. Proves the conversion happens.
     utc_0430 = datetime(2026, 1, 15, 4, 30, tzinfo=timezone.utc)
     assert refresh_seconds(utc_0430, SERVICE) == IN_SERVICE_SECONDS
+
+
+# A window that runs until midnight: end_hour is 24, so 23:00 is still in service
+# and the slow window is only 00:00–06:00 (DESIGN §2.5, owner 2026-09-06).
+TILL_MIDNIGHT = ServiceHours(start_hour=6, end_hour=24)
+
+
+def test_midnight_window_late_evening_in_service():
+    assert refresh_seconds(_warsaw_winter(23, 0), TILL_MIDNIGHT) == IN_SERVICE_SECONDS
+
+
+def test_midnight_window_after_midnight_is_out():
+    # 23:00 UTC on the 15th is 00:00 local on the 16th (+1): overnight now.
+    utc_midnight_local = datetime(2026, 1, 15, 23, 0, tzinfo=timezone.utc)
+    assert refresh_seconds(utc_midnight_local, TILL_MIDNIGHT) == OVERNIGHT_SECONDS
+
+
+def test_midnight_window_start_edge_in_service():
+    assert refresh_seconds(_warsaw_winter(6, 0), TILL_MIDNIGHT) == IN_SERVICE_SECONDS
+    assert refresh_seconds(_warsaw_winter(5, 59), TILL_MIDNIGHT) == OVERNIGHT_SECONDS

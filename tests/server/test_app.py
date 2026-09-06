@@ -12,7 +12,7 @@ from datetime import datetime
 from trmnl.core.model import WARSAW, ServiceHours
 from trmnl.server import app as srv
 
-# Service window 06:00–22:00 local, so 08:42 is in-service (→ 60s) and 03:00 is
+# Service window 06:00–22:00 local, so 08:42 is in-service (→ 120s) and 03:00 is
 # overnight (→ 1800s). Matches core/refresh.py's policy (DESIGN §2.5).
 SERVICE = ServiceHours(start_hour=6, end_hour=22)
 IN_SERVICE = datetime(2026, 9, 5, 8, 42, tzinfo=WARSAW)
@@ -75,7 +75,7 @@ def test_display_returns_valid_json_with_url_and_int_rate(tmp_path):
 
 
 def test_display_refresh_rate_follows_the_injected_clock(tmp_path):
-    assert json.loads(_display(_app(tmp_path, now=IN_SERVICE)).body)["refresh_rate"] == 60
+    assert json.loads(_display(_app(tmp_path, now=IN_SERVICE)).body)["refresh_rate"] == 120
     assert json.loads(_display(_app(tmp_path, now=OVERNIGHT)).body)["refresh_rate"] == 1800
 
 
@@ -187,7 +187,7 @@ def test_over_http_end_to_end(tmp_path):
         with urllib.request.urlopen(f"{base}/api/display", timeout=5) as r:
             assert r.status == 200
             display = json.loads(r.read())
-        assert display["refresh_rate"] == 60  # IN_SERVICE clock
+        assert display["refresh_rate"] == 120  # IN_SERVICE clock
 
         # The device would now GET image_url; do the same and expect the image.
         with urllib.request.urlopen(display["image_url"], timeout=5) as r:
