@@ -11,3 +11,7 @@ venv/
 # The real config carries the household's coordinates and calendar id, which stay
 # in the house (DESIGN §1). Only config.example.toml is committed.
 config.toml
+
+# The OAuth refresh token copied onto the box for the Docker mount (DESIGN §3.5).
+# A live credential — never commit it.
+token.json
