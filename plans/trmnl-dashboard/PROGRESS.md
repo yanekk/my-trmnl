@@ -20,13 +20,11 @@ realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi 
 zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
 (`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
-This session: reviewed T10 — clean, no fix commit. 201 green Mac (re-run); Config/assemble call
-sites all updated; layout collision-free; deviation (skip empty brand/model) sound. Its on-device
-half (makers read right on real 227 rows) is unverified and folds into the owner's T09 device
-pass, alongside T10 deploy. T09 still 🟡 (owner's on-device check outstanding).
-**Next `pir-work` will:** nothing automatic — no 🔍 or actionable 🟡 remains. T09 and T10 both
-wait on the owner's on-device pass (deploy T10, point the device, judge cadence, confirm makers
-and reboot recovery). All other tasks are ✅.
+This session: reviewed T10 (clean, no fix), then the owner deployed it and ran the on-device
+pass — makers read right on real 227 rows, cadence good, reboot recovers (FINDINGS). T09 and T10
+both now ✅. All eleven tasks (T00–T10) are ✅; the plan is complete.
+**Next `pir-work` will:** nothing — every task is ✅ and hand-verified. No work remains on this
+plan. A new feature needs `/pir-plan`.
 
 ## Tasks
 
@@ -44,12 +42,11 @@ done · ⛔ blocked, needs a human.
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean. Per-pole isolation tested (dead pole → others render; all-fail → Failure). A malformed 227 row drops its whole pole; poles fetched serially, 10s each. |
 | T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean. OAuth consent hand-verified by owner 2026-09-05 (FINDINGS). Multi-day all-day gap handed to T08. |
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix. Wiring signatures, Warsaw conversion, per-source timeouts, atomic `os.replace`, multi-day clip all probed; three deviations authorized. |
-| T09 | Deploy on home box + on-device verification | T08 | 🟡 | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`, all three sources verified live over HTTP. Docker deploy dropped (NAS/Pi have none). Outstanding, owner on the device: point the TRMNL at the Pi, judge cadence, confirm reboot recovery. Implementation complete; only the human device check remains. |
-| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ✅ | Reviewed clean, no fix. 201 green Mac (re-run); all `Config`/`assemble` call sites updated; the full-width vehicle line stays inside `[left,right]`, no collision. Probed: skip-empty-brand/model deviation safe (codes unique, trams never queried); cache `issubset` join correct; on a miss the vehicle fetch runs in series after the sources (cold-start latency, bounded 15s). On-device visual (makers on real 227 rows) unverified — folds into owner's T09 device pass, with T10 deploy. |
+| T09 | Deploy on home box + on-device verification | T08 | ✅ | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`. On-device verified by owner 2026-09-06 (FINDINGS): device shows the board, cadence good (`refresh_rate=120`), reboot recovers. Docker dropped (NAS/Pi have none). |
+| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ✅ | Reviewed clean, no fix. 201 green Mac (re-run); all `Config`/`assemble` call sites updated; the full-width vehicle line stays inside `[left,right]`, no collision. Probed: skip-empty-brand/model deviation safe (codes unique, trams never queried); cache `issubset` join correct; on a miss the vehicle fetch runs in series after the sources (cold-start latency, bounded 15s). On-device visual verified by owner 2026-09-06 (FINDINGS): makers read right on real 227 rows. |
 
-**Review queue:** empty. T09 and T10 are both implementation-complete and reviewed; both wait
-on the owner's on-device pass — deploy T10, point the device, judge cadence, confirm the makers
-read right on real 227 rows, and confirm reboot recovery. Record each dated in FINDINGS.
+**Review queue:** empty. All tasks T00–T10 are ✅ and hand-verified on the real device. The plan
+is complete — no build or review work remains.
 
 ## Blocked on the user
 
@@ -59,5 +56,5 @@ pd0pfl6q60afma9et1o2n46f1c@group.calendar.google.com (Madziojankowy kalendarz). 
 id and the token path into config. At T09 the token file must be copied to the deploy box (it is
 portable — a refresh token — so no second consent is needed).
 
-T09 still needs the physical device for on-device verification of the real dashboard. Config
-values (stops, line, coordinates, calendar id) are collected during T05/T06/T09.
+Nothing blocked. T09's on-device verification is done (owner, 2026-09-06, FINDINGS): the device
+shows the board, cadence good, reboot recovers. Nothing on this plan now waits on the user.
