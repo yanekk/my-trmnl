@@ -3,6 +3,23 @@
 An e-ink dashboard for a Seeed TRMNL device. Product docs live in `README.md` and
 `plans/trmnl-dashboard/DESIGN.md`; the working method is below the line.
 
+## Developing locally
+
+Iterate on this Mac, no Docker needed. `.venv` is Python 3.13 (`pip install -e
+".[test]"`). Run the server against the local config:
+
+    .venv/bin/python -m trmnl.server.loop config.local.toml
+
+`config.local.toml` is git-ignored and uses Mac paths: it serves `:8080` and writes
+the screen to `.local/screen.bmp`. Code edits take effect on a plain restart — there
+is no image to rebuild (the Docker rebuild trap only applies to a containerised run).
+To see the render, convert the 1-bit BMP, e.g. `sips -s format png .local/screen.bmp
+--out /tmp/screen.png`. The device can point at this Mac's `:8080` to preview on real
+e-ink before deploying.
+
+Golden/rendering tests still run in Docker (`docker compose run --rm test`) because
+the goldens are pixel-exact to that runtime; a local render can differ by a hair.
+
 ## Deploying
 
 The dashboard runs **natively (no Docker)** on a Raspberry Pi. Deploy or update it
