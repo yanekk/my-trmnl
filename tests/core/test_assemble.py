@@ -138,58 +138,49 @@ def test_allday_event_has_empty_label_and_sorts_first():
     assert d.tomorrow[1].label == "10:00"  # 09:00 UTC -> 10:00 local (+1)
 
 
-# --- departure phrasing (DESIGN §2.3) ---------------------------------------
+# --- departure labels: realtime vs scheduled (DESIGN §2.3) ------------------
 
 
-def test_departures_phrasing_sorting_and_cap():
+def test_realtime_shows_countdown_scheduled_shows_clock():
     now = utc(2026, 1, 15, 12, 0)
     deps = [
-        Departure("227", "Jelitkowo", now.replace(minute=40)),  # +40 -> clock
-        Departure("227", "Chełm", now.replace(minute=3)),  # +3 -> za 3 min
-        Departure("227", "Jelitkowo", now.replace(minute=20)),  # +20 -> clock
-        Departure("227", "Chełm", now.replace(minute=10)),  # +10 -> za 10 min
-        Departure("227", "Jelitkowo", now.replace(minute=50)),  # +50 -> clock
-        Departure("227", "Chełm", now.replace(minute=55)),  # +55 -> clock (6th)
-        Departure("227", "Gone", utc(2026, 1, 15, 11, 30)),  # past -> dropped
+        Departure("227", "Chełm", now.replace(minute=3), realtime=True),  # GPS -> za 3 min
+        Departure("227", "Jelitkowo", now.replace(minute=40), realtime=True),  # GPS far -> still countdown
+        Departure("126", "Wrzeszcz", now.replace(minute=52), realtime=False),  # schedule -> clock
+        Departure("227", "Gone", utc(2026, 1, 15, 11, 30), realtime=True),  # past -> dropped
     ]
     d = assemble(sources(bus=deps), now)
-    labels = [r.label for r in d.buses]
-    # Past one dropped, sorted by time, capped to BUS_ROWS.
-    assert len(d.buses) == BUS_ROWS
     assert "Gone" not in [r.headsign for r in d.buses]
-    assert labels[0] == "za 3 min"
-    assert labels[1] == "za 10 min"
-    # 13:20 local (12:20 UTC +1) etc. — the far ones are clock times.
-    assert labels[2] == "13:20"
-    assert labels[3] == "13:40"
-    assert labels[4] == "13:50"
+    # Sorted by time. A GPS-tracked bus counts down whatever the distance; the
+    # schedule-only one is a clock time (12:52 UTC -> 13:52 local, +1). The clock
+    # format is what marks it schedule-only.
+    assert [r.label for r in d.buses] == ["za 3 min", "za 40 min", "13:52"]
 
 
-def test_near_minutes_boundary_is_exclusive():
+def test_departures_sorted_and_capped():
     now = utc(2026, 1, 15, 12, 0)
-    just_inside = Departure("227", "A", now.replace(minute=14))  # 14 < 15 -> phrase
-    on_boundary = Departure("227", "B", now.replace(minute=15))  # 15 -> clock
-    d = assemble(sources(bus=[just_inside, on_boundary]), now)
-    assert d.buses[0].label == "za 14 min"
-    assert d.buses[1].label == "13:15"  # 12:15 UTC -> 13:15 local
+    deps = [
+        Departure("227", str(m), now.replace(minute=m), realtime=True)
+        for m in (55, 3, 20, 10, 50, 40)
+    ]
+    d = assemble(sources(bus=deps), now)
+    assert len(d.buses) == BUS_ROWS  # capped
+    assert [r.headsign for r in d.buses] == ["3", "10", "20", "40", "50"]  # sorted; 55 dropped
 
 
 # --- timezone conversion across a DST change (DESIGN §2.1, §2.3) ------------
 
 
-def test_departure_clock_label_respects_dst():
-    # Summer: Warsaw is +2. 06:30 UTC -> 08:30 local.
-    summer_now = utc(2026, 7, 1, 5, 0)
-    summer_dep = Departure("227", "Jelitkowo", utc(2026, 7, 1, 6, 30))
-    d_summer = assemble(sources(bus=[summer_dep]), summer_now)
-    assert d_summer.buses[0].label == "08:30"
+def test_scheduled_clock_label_respects_dst():
+    # A clock label appears only for schedule-only departures now; it must still
+    # localize correctly across the DST boundary.
+    summer_now = utc(2026, 7, 1, 5, 0)  # Warsaw +2. 06:30 UTC -> 08:30 local.
+    summer_dep = Departure("227", "Jelitkowo", utc(2026, 7, 1, 6, 30), realtime=False)
+    assert assemble(sources(bus=[summer_dep]), summer_now).buses[0].label == "08:30"
 
-    # Winter: Warsaw is +1. 06:30 UTC -> 07:30 local. Same UTC clock, one hour
-    # earlier locally — this is the DST difference the core must get right.
-    winter_now = utc(2026, 1, 15, 5, 0)
-    winter_dep = Departure("227", "Jelitkowo", utc(2026, 1, 15, 6, 30))
-    d_winter = assemble(sources(bus=[winter_dep]), winter_now)
-    assert d_winter.buses[0].label == "07:30"
+    winter_now = utc(2026, 1, 15, 5, 0)  # Warsaw +1. Same UTC clock, one hour earlier.
+    winter_dep = Departure("227", "Jelitkowo", utc(2026, 1, 15, 6, 30), realtime=False)
+    assert assemble(sources(bus=[winter_dep]), winter_now).buses[0].label == "07:30"
 
 
 def test_event_label_respects_dst():

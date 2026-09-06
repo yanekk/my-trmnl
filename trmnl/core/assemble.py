@@ -90,10 +90,10 @@ def assemble(
     """Build the full view-model from fetched sources and the current time.
 
     `now` must be timezone-aware. Every source is handled independently so one
-    failure never affects another (DESIGN §2.6). `near_minutes` is the threshold
-    below which a departure reads as "za N min" rather than a clock time; it is a
-    keyword with the module default so existing callers and the goldens are
-    unaffected, and the composition root (T08) passes the config value in."""
+    failure never affects another (DESIGN §2.6). `near_minutes` is retained for
+    interface and config compatibility (the composition root still passes it) but
+    no longer affects the board: the departure label is now driven by the feed's
+    realtime/scheduled status, not by distance (DESIGN §2.3, owner 2026-09-06)."""
     now_local = now.astimezone(WARSAW)
 
     if isinstance(sources.weather, Failure):
@@ -107,7 +107,7 @@ def assemble(
         buses: list[BusRow] = []
         buses_region = Region(available=False, as_of=None)
     else:
-        buses = _bus_rows(sources.bus, now, near_minutes)
+        buses = _bus_rows(sources.bus, now)
         buses_region = Region(available=True, as_of=now)
 
     if isinstance(sources.calendar, Failure):
@@ -171,22 +171,25 @@ def _weather_hours(hourly: list[HourPoint], now: datetime) -> list[HourView]:
 # --- buses ------------------------------------------------------------------
 
 
-def _bus_rows(
-    departures: list[Departure], now: datetime, near_minutes: int
-) -> list[BusRow]:
+def _bus_rows(departures: list[Departure], now: datetime) -> list[BusRow]:
     """Upcoming departures, sorted by time and capped (DESIGN §2.3). Departures
     already gone (`when < now`) are dropped so the list never shows a negative
     "za N min". An empty result is a valid available region ("brak odjazdów")."""
     upcoming = sorted((d for d in departures if d.when >= now), key=lambda d: d.when)
     return [
-        BusRow(line=d.line, headsign=d.headsign, label=_bus_label(d.when, now, near_minutes))
+        BusRow(line=d.line, headsign=d.headsign, label=_bus_label(d.when, now, d.realtime))
         for d in upcoming[:BUS_ROWS]
     ]
 
 
-def _bus_label(when: datetime, now: datetime, near_minutes: int) -> str:
-    delta_min = (when - now).total_seconds() / 60
-    if delta_min < near_minutes:
+def _bus_label(when: datetime, now: datetime, realtime: bool) -> str:
+    """A GPS-tracked departure shows a live countdown ("za N min"); a schedule-only
+    one shows its timetable clock time. The format itself signals the source, so a
+    clock time on the board always means "from the timetable, not yet tracked"
+    (DESIGN §2.3, owner 2026-09-06). This replaced an earlier near/far rule keyed on
+    `near_minutes`, which is why that config value no longer drives the label."""
+    if realtime:
+        delta_min = (when - now).total_seconds() / 60
         return f"za {max(0, round(delta_min))} min"
     return when.astimezone(WARSAW).strftime("%H:%M")
 

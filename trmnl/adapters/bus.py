@@ -171,9 +171,13 @@ def _fetch_one_pole(
 def _parse_pole(payload: dict, line: str) -> list[Departure]:
     """Turn one pole's decoded response into `Departure`s for `line`.
 
-    Reads `estimatedTime` (the realtime estimate, already including any delay) as
-    the departure time per DESIGN §2.3; `delayInSeconds` is informational and not
-    needed once the estimate is used. A missing `departures` key, a non-list, or a
+    Reads `estimatedTime` as the departure time per DESIGN §2.3. The feed's
+    `status` tells GPS-tracked from schedule-only: a REALTIME row is a bus being
+    tracked, and its `estimatedTime` already includes any delay; a SCHEDULED row
+    has no bus reporting yet, and its `estimatedTime` equals the timetable time.
+    Both carry `estimatedTime`, so both are shown — the board just labels them
+    differently (`realtime` flag). `delayInSeconds` is informational and unused
+    once the estimate is read. A missing `departures` key, a non-list, or a
     matching-line row missing a field it needs raises and the caller skips the
     pole. Rows for other lines are filtered out before their fields are touched,
     so an oddly-shaped row for a line we do not show cannot fail our pole."""
@@ -191,7 +195,13 @@ def _parse_pole(payload: dict, line: str) -> list[Departure]:
         # into the core, which compares it against a tz-aware `now`.
         if when.tzinfo is None:
             when = when.replace(tzinfo=timezone.utc)
-        rows.append(Departure(line=short_name, headsign=row["headsign"], when=when))
+        # Only an explicit REALTIME status is treated as GPS-tracked; anything else
+        # (SCHEDULED, or a missing status) is schedule-only, so a lost status field
+        # degrades safely to a clock time rather than a false live countdown.
+        realtime = row.get("status") == "REALTIME"
+        rows.append(
+            Departure(line=short_name, headsign=row["headsign"], when=when, realtime=realtime)
+        )
     return rows
 
 

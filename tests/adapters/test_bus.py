@@ -163,6 +163,28 @@ def test_estimated_time_is_read_as_utc_and_tz_aware():
     assert first.when.utcoffset() == timezone.utc.utcoffset(None)
 
 
+def test_status_sets_the_realtime_flag():
+    # The feed's `status` marks GPS-tracked (REALTIME) vs schedule-only (SCHEDULED);
+    # a missing status degrades to schedule-only, not a false live countdown.
+    payload = {
+        "departures": [
+            {"routeShortName": "227", "headsign": "GPS",
+             "estimatedTime": "2026-09-05T19:10:00Z", "status": "REALTIME"},
+            {"routeShortName": "227", "headsign": "Rozkład",
+             "estimatedTime": "2026-09-05T19:52:00Z", "status": "SCHEDULED"},
+            {"routeShortName": "227", "headsign": "BezStatusu",
+             "estimatedTime": "2026-09-05T19:20:00Z"},
+        ]
+    }
+    client = _StubClient(by_stop={HYNKA_TO_JELITKOWO: _ok(payload)})
+    result = fetch_departures([HYNKA_TO_JELITKOWO], "227", NOW, client)
+    assert {d.headsign: d.realtime for d in result} == {
+        "GPS": True,
+        "Rozkład": False,
+        "BezStatusu": False,
+    }
+
+
 def test_departures_from_several_poles_are_merged():
     # Both directions of Hynka: 1767 gives one 227 toward Chełm, 1768 two toward
     # Jelitkowo. The merged list carries all three for the core to sort.

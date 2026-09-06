@@ -17,8 +17,9 @@ over-budget cell they walk past.
 README deploy note. Several owner-directed render changes on 2026-09-06: diacritics fixed
 (`_tracked` baseline), hourly weather icons, then a less-verbose pass (region titles removed
 except DZIŚ/JUTRO, no main icon, one-line "13° · 20 km/h", compact centred hourly stack, no bus
-separators). Design iterated on a local venv server (see FINDINGS); goldens regenerated, 170
-green. On-device verification is the outstanding half and needs the owner + the physical device.
+separators), then bus labels driven by the feed's realtime/scheduled status (GPS → "za N min",
+schedule-only → clock; DESIGN §2.3). Design iterated on a local venv server (see FINDINGS);
+171 green. On-device verification is the outstanding half and needs the owner + the physical device.
 **Last updated:** 2026-09-06
 **Next `pir-work` will:** review T09's deploy artifacts once the owner has confirmed on device.
 

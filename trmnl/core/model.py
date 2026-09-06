@@ -86,11 +86,17 @@ class WeatherData:
 class Departure:
     """One upcoming bus. `when` is tz-aware (UTC as fetched from ckan2). There is
     no direction field in the feed; direction is implied by `headsign` and the
-    stop the adapter chose (DESIGN §2.3)."""
+    stop the adapter chose (DESIGN §2.3).
+
+    `realtime` is the feed's `status`: True for a GPS-tracked bus (REALTIME, `when`
+    is the live estimate), False for a schedule-only run (SCHEDULED, `when` is the
+    timetable time, no bus reporting yet). The board shows the two differently — a
+    live countdown vs a clock time (DESIGN §2.3)."""
 
     line: str
     headsign: str
     when: datetime
+    realtime: bool
 
 
 @dataclass(frozen=True)

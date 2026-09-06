@@ -74,7 +74,7 @@ def _weather_ok(cfg, now, deps):
 
 
 def _bus_ok(cfg, now, deps):
-    return [Departure("227", "Jelitkowo", now + timedelta(minutes=5))]
+    return [Departure("227", "Jelitkowo", now + timedelta(minutes=5), realtime=True)]
 
 
 def _calendar_ok(cfg, now, deps):

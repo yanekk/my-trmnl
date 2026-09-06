@@ -78,11 +78,17 @@ Location is a fixed coordinate for Gdańsk, set in config.
 ### 2.3 Buses
 
 A single chronological list of the next departures for one line (default 227) from the owner's
-stops, each row showing line number, destination (headsign), and time. Imminent departures
-show as "za N min"; later ones show a clock time. The list mixes both directions/stops and is
-sorted by time, because the owner wants "what leaves next", not a per-stop board. This simpler
-list replaced an earlier per-stop boxed layout at the owner's request (§7). Rows have no
-separator rule between them (owner, 2026-09-06); the whitespace is enough.
+stops, each row showing line number, destination (headsign), and time. The time format shows
+the data source (owner, 2026-09-06): a GPS-tracked departure (feed `status` REALTIME) shows a
+live countdown "za N min"; a schedule-only departure (SCHEDULED — no bus reporting yet) shows
+its timetable clock time, e.g. "09:52". The countdown-vs-clock format is the signal, so a clock
+time on the board always means "from the timetable, not yet tracked", matching the ZTM app.
+This replaced an earlier rule that chose the format by distance (a `near_minutes` threshold);
+`near_minutes` remains a config field but no longer affects the label. The list mixes both
+directions/stops and is sorted by time, because the owner wants "what leaves next", not a
+per-stop board. This simpler list replaced an earlier per-stop boxed layout at the owner's
+request (§7). Rows have no separator rule between them (owner, 2026-09-06); the whitespace is
+enough.
 
 Source is the Gdańsk open-data live departures endpoint
 `https://ckan2.multimediagdansk.pl/departures?stopId={stopId}`, which fuses schedule and
