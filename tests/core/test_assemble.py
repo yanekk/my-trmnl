@@ -227,9 +227,10 @@ def test_unknown_weather_code_falls_back_not_crashes():
 def test_weather_hours_are_rest_of_today_localized_and_capped():
     now = utc(2026, 1, 15, 7, 30)  # 08:30 local (+1)
     # Points at 07,08,...,23 UTC today plus one yesterday and one tomorrow.
-    hourly = [HourPoint(time=utc(2026, 1, 15, h), temp_c=h, rain_pct=h) for h in range(7, 24)]
-    hourly.append(HourPoint(time=utc(2026, 1, 14, 23), temp_c=-1, rain_pct=0))
-    hourly.append(HourPoint(time=utc(2026, 1, 16, 6), temp_c=99, rain_pct=99))
+    # code 61 = "Deszcz" -> icon "rain", so the per-hour icon can be asserted.
+    hourly = [HourPoint(time=utc(2026, 1, 15, h), temp_c=h, rain_pct=h, code=61) for h in range(7, 24)]
+    hourly.append(HourPoint(time=utc(2026, 1, 14, 23), temp_c=-1, rain_pct=0, code=61))
+    hourly.append(HourPoint(time=utc(2026, 1, 16, 6), temp_c=99, rain_pct=99, code=61))
     w = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, hourly=hourly)
     d = assemble(sources(weather=w), now)
     hours = d.weather.hours
@@ -239,6 +240,20 @@ def test_weather_hours_are_rest_of_today_localized_and_capped():
     assert hours[0].label == "09"  # 08:00 UTC -> 09:00 local
     assert hours[-1].label == "14"
     assert all(h.temp_c < 99 for h in hours)  # tomorrow's point excluded
+    assert all(h.icon == "rain" for h in hours)  # per-hour code 61 -> rain icon
+
+
+def test_hourly_icon_maps_per_hour_code_with_fallback():
+    now = utc(2026, 1, 15, 7, 30)
+    # Distinct codes per hour, plus an unknown code that must fall back to cloud.
+    codes = [0, 3, 61, 71, 95, 1234]  # sun, cloud, rain, snow, storm, unknown
+    hourly = [
+        HourPoint(time=utc(2026, 1, 15, 8 + i), temp_c=10, rain_pct=0, code=code)
+        for i, code in enumerate(codes)
+    ]
+    w = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, hourly=hourly)
+    hours = assemble(sources(weather=w), now).weather.hours
+    assert [h.icon for h in hours] == ["sun", "cloud", "rain", "snow", "storm", "cloud"]
 
 
 # --- attribution (DESIGN §2.3) ----------------------------------------------

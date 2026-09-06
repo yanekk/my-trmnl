@@ -14,8 +14,10 @@ over-budget cell they walk past.
 (no on-screen clock/top bar; empty regions show a short line; cold-start "Uruchamianie…" placeholder).
 
 **Status:** T09 build half done: production `dashboard` compose service (`restart: always`) +
-README deploy note; 168 green (source mount). On-device verification is the outstanding half and
-needs the owner + the physical device — handover raised, awaiting the owner.
+README deploy note. Two owner-directed rendering changes on 2026-09-06: heading diacritics fixed
+(`_tracked` baseline), and the hourly strip now shows a per-hour weather icon instead of a bar
+(DESIGN §2.2, FINDINGS). Goldens regenerated; 170 green. On-device verification is the
+outstanding half and needs the owner + the physical device — handover raised, awaiting the owner.
 **Last updated:** 2026-09-06
 **Next `pir-work` will:** review T09's deploy artifacts once the owner has confirmed on device.
 

@@ -56,13 +56,14 @@ def _weather_view():
         icon="cloud",
         feels_like_c=10,
         wind_kmh=15,
+        # A spread of icons so the golden exercises the hourly-strip glyphs.
         hours=[
-            HourView(label="09", temp_c=13, rain_pct=10),
-            HourView(label="10", temp_c=13, rain_pct=20),
-            HourView(label="11", temp_c=14, rain_pct=40),
-            HourView(label="12", temp_c=14, rain_pct=60),
-            HourView(label="13", temp_c=13, rain_pct=55),
-            HourView(label="14", temp_c=12, rain_pct=30),
+            HourView(label="09", temp_c=13, rain_pct=10, icon="sun"),
+            HourView(label="10", temp_c=13, rain_pct=20, icon="part-cloud"),
+            HourView(label="11", temp_c=14, rain_pct=40, icon="cloud"),
+            HourView(label="12", temp_c=14, rain_pct=60, icon="drizzle"),
+            HourView(label="13", temp_c=13, rain_pct=55, icon="rain"),
+            HourView(label="14", temp_c=12, rain_pct=30, icon="storm"),
         ],
     )
 

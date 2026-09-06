@@ -81,6 +81,7 @@ def test_hourly_points_are_tz_aware_utc_and_typed():
     for pt in result.hourly:
         assert isinstance(pt.temp_c, int)
         assert isinstance(pt.rain_pct, int)
+        assert isinstance(pt.code, int)
     assert isinstance(result.temp_c, int)
     assert isinstance(result.wind_kmh, int)
     assert isinstance(result.feels_like_c, int)
@@ -114,7 +115,7 @@ def test_request_asks_for_metric_units_and_the_given_point():
     assert params["timezone"] == "GMT"
     assert params["forecast_days"] == 2
     assert params["current"] == "temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
-    assert params["hourly"] == "temperature_2m,precipitation_probability"
+    assert params["hourly"] == "temperature_2m,precipitation_probability,weather_code"
     # A timeout is always set so one slow source cannot stall the image (§2.6).
     assert client.calls[0]["timeout"] is not None
 
@@ -157,6 +158,17 @@ def test_missing_current_field_returns_failure():
     bad = _fixture()
     del bad["current"]["temperature_2m"]
     assert isinstance(fetch_weather(LAT, LON, NOW, _StubClient(payload=bad)), Failure)
+
+
+def test_null_hourly_weather_code_falls_back_not_fails():
+    # A null hourly weather_code is unusual but must not fail the whole fetch: it
+    # degrades only that hour's icon (code -1 → the core's fallback), unlike a
+    # null temperature which is malformed.
+    bad = _fixture()
+    bad["hourly"]["weather_code"][0] = None
+    result = fetch_weather(LAT, LON, NOW, _StubClient(payload=bad))
+    assert isinstance(result, WeatherData)
+    assert result.hourly[0].code == -1
 
 
 def test_null_temperature_is_malformed_not_a_half_filled_object():

@@ -114,9 +114,17 @@ def _tracked(
 ) -> None:
     """Draw `text` at (x, y) with extra pixels of letter-spacing between glyphs.
     Pillow has no tracking of its own, so the small uppercase labels — the one
-    place the mock leans on wide letter-spacing — are drawn a glyph at a time."""
+    place the mock leans on wide letter-spacing — are drawn a glyph at a time.
+
+    Each glyph is anchored on the shared baseline (y + ascent, anchor "ls"), not
+    top-anchored: a top anchor aligns each glyph's own bounding box, so an accented
+    capital (Ń, Ś) — whose box is taller because of the accent — was pushed down
+    and sat below the line of its neighbours. Baseline-anchoring keeps every
+    glyph's body on the line and lets only the accent rise above it. `y` stays the
+    text's top, so callers are unaffected."""
+    baseline = y + font.getmetrics()[0]  # ascent: top → baseline
     for ch in text:
-        draw.text((x, y), ch, font=font, fill=BLACK, anchor="lt")
+        draw.text((x, baseline), ch, font=font, fill=BLACK, anchor="ls")
         x += _text_width(ch, font) + tracking
 
 
@@ -306,46 +314,28 @@ def _render_weather(draw: ImageDraw.ImageDraw, dash: Dashboard, label: str) -> N
 
 def _render_hours(draw: ImageDraw.ImageDraw, hours: list) -> None:
     """The rest-of-today strip along the bottom of the weather box: per hour a
-    temperature, a hatched bar whose height tracks that temperature, a rain
-    chance and the hour. The core already capped this to fit (WEATHER_HOURS), and
-    near midnight it can be empty, which simply draws nothing."""
+    temperature, a small icon of that hour's expected weather, the rain chance and
+    the hour. The icon replaced an earlier hatched bar that only re-encoded the
+    temperature already printed above it. The core already capped this to fit
+    (WEATHER_HOURS), and near midnight it can be empty, which draws nothing."""
     if not hours:
         return
     strip_top = 150
     strip_left = PAD
     strip_right = LEFT_W - PAD
-    n = len(hours)
     col_w = (strip_right - strip_left) // 6  # fixed 6-slot grid so 1..6 align left
 
-    temps = [h.temp_c for h in hours]
-    lo, hi = min(temps), max(temps)
-    bar_top = strip_top + 22
-    bar_max_h = 40
-    bar_base = bar_top + bar_max_h
-
-    small = _font(_SANS, 15)
     mono_h = _font(_MONO, 15)
     temp_f = _font(_SANS_SB, 19)
 
+    icon_cy = strip_top + 44   # icon centre; leaves room for the temp above it
+    icon_r = 13                # small enough that rain/snow/storm extras stay in-box
     for i, h in enumerate(hours):
         cx = strip_left + col_w * i + col_w // 2
-        # temperature above the bar
         draw.text((cx, strip_top), f"{h.temp_c}°", font=temp_f, fill=BLACK, anchor="mt")
-        # bar height scaled across the visible range; flat range → mid height
-        if hi > lo:
-            frac = (h.temp_c - lo) / (hi - lo)
-            bh = 12 + int(frac * (bar_max_h - 12))
-        else:
-            bh = bar_max_h // 2
-        bw = col_w - 14
-        bx0 = cx - bw // 2
-        bx1 = cx + bw // 2
-        by0 = bar_base - bh
-        draw.rectangle([bx0, by0, bx1, bar_base], outline=BLACK, width=1)
-        _hatch_rect(draw, bx0 + 1, by0 + 1, bx1 - 1, bar_base - 1, spacing=4)
-        # rain chance, then the hour, below the bar
-        draw.text((cx, bar_base + 6), f"{h.rain_pct}%", font=mono_h, fill=BLACK, anchor="mt")
-        draw.text((cx, bar_base + 26), h.label, font=mono_h, fill=BLACK, anchor="mt")
+        _draw_icon(draw, cx, icon_cy, icon_r, h.icon)
+        draw.text((cx, strip_top + 64), f"{h.rain_pct}%", font=mono_h, fill=BLACK, anchor="mt")
+        draw.text((cx, strip_top + 84), h.label, font=mono_h, fill=BLACK, anchor="mt")
 
 
 # --- buses region -----------------------------------------------------------

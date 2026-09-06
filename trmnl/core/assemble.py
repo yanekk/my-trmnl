@@ -77,6 +77,13 @@ _WEATHER: dict[int, tuple[str, str]] = {
 _WEATHER_FALLBACK = ("—", "cloud")
 
 
+def _icon_for(code: int) -> str:
+    """The renderer icon key for a WMO weather code, or the fallback cloud for an
+    unknown code. Used for both the current conditions and each hourly point, so
+    the strip's icons match the big current-weather icon."""
+    return _WEATHER.get(code, _WEATHER_FALLBACK)[1]
+
+
 def assemble(
     sources: Sources, now: datetime, *, near_minutes: int = NEAR_MINUTES
 ) -> Dashboard:
@@ -128,7 +135,8 @@ def assemble(
 
 
 def _weather_view(w: WeatherData, now: datetime) -> WeatherView:
-    condition, icon = _WEATHER.get(w.condition_code, _WEATHER_FALLBACK)
+    condition = _WEATHER.get(w.condition_code, _WEATHER_FALLBACK)[0]
+    icon = _icon_for(w.condition_code)
     return WeatherView(
         temp_c=w.temp_c,
         condition=condition,
@@ -149,7 +157,14 @@ def _weather_hours(hourly: list[HourPoint], now: datetime) -> list[HourView]:
     for pt in sorted(hourly, key=lambda p: p.time):
         local = pt.time.astimezone(WARSAW)
         if pt.time > now and local.date() == now_local.date():
-            rows.append(HourView(label=local.strftime("%H"), temp_c=pt.temp_c, rain_pct=pt.rain_pct))
+            rows.append(
+                HourView(
+                    label=local.strftime("%H"),
+                    temp_c=pt.temp_c,
+                    rain_pct=pt.rain_pct,
+                    icon=_icon_for(pt.code),
+                )
+            )
     return rows[:WEATHER_HOURS]
 
 

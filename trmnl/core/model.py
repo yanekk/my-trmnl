@@ -59,11 +59,14 @@ class Failure:
 @dataclass(frozen=True)
 class HourPoint:
     """One hour of the forecast. `time` is tz-aware (UTC as fetched); the core
-    localizes it and keeps only the rest of today (DESIGN §2.2)."""
+    localizes it and keeps only the rest of today (DESIGN §2.2). `code` is that
+    hour's Open-Meteo WMO weather code; the core maps it to an icon key for the
+    hourly strip, the same mapping the current conditions use."""
 
     time: datetime
     temp_c: int
     rain_pct: int
+    code: int
 
 
 @dataclass(frozen=True)
@@ -139,11 +142,13 @@ class Region:
 @dataclass(frozen=True)
 class HourView:
     """One column of the hourly strip, already localized. `label` is the local
-    hour, e.g. "09"."""
+    hour, e.g. "09"; `icon` is the renderer's icon key for that hour's expected
+    weather (same vocabulary as `WeatherView.icon`)."""
 
     label: str
     temp_c: int
     rain_pct: int
+    icon: str
 
 
 @dataclass(frozen=True)

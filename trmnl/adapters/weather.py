@@ -36,7 +36,9 @@ _TIMEOUT_S = 10.0
 # UTC→Europe/Warsaw conversion to the core. Units are pinned metric explicitly so a
 # change to Open-Meteo's defaults can never silently switch them (DESIGN §2.2).
 _CURRENT = "temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
-_HOURLY = "temperature_2m,precipitation_probability"
+# weather_code per hour drives the hourly strip's icons (the core maps it to an
+# icon key, same as the current conditions); temperature and precip stay too.
+_HOURLY = "temperature_2m,precipitation_probability,weather_code"
 
 # Two days of hourly data guarantees the whole of today's Europe/Warsaw calendar
 # day is covered whichever side of a UTC day boundary "now" falls; the core keeps
@@ -91,18 +93,27 @@ def _parse(payload: dict) -> WeatherData:
     times = hourly["time"]
     temps = hourly["temperature_2m"]
     probs = hourly["precipitation_probability"]
+    codes = hourly["weather_code"]
 
     points: list[HourPoint] = []
     # strict=True: mismatched array lengths are a malformed body, not a silent
-    # truncation. Open-Meteo returns these three arrays index-aligned.
-    for iso, temp, prob in zip(times, temps, probs, strict=True):
+    # truncation. Open-Meteo returns these arrays index-aligned.
+    for iso, temp, prob, code in zip(times, temps, probs, codes, strict=True):
         when = datetime.fromisoformat(iso).replace(tzinfo=timezone.utc)
         # precipitation_probability is legitimately null for hours past the model's
         # probability horizon; those hours are never today, so a missing chance
         # reads as 0% rather than failing the whole fetch. A null temperature, by
         # contrast, is malformed and raises via round(None).
+        # A null weather_code (unusual — it is a core variable) degrades only that
+        # hour's icon to the neutral fallback rather than failing the fetch: -1 is
+        # not in the core's code map, so it maps to the fallback cloud.
         points.append(
-            HourPoint(time=when, temp_c=round(temp), rain_pct=round(prob or 0))
+            HourPoint(
+                time=when,
+                temp_c=round(temp),
+                rain_pct=round(prob or 0),
+                code=int(code) if code is not None else -1,
+            )
         )
 
     return WeatherData(

@@ -59,9 +59,13 @@ fills), never by a grey value, because a grey value does not exist on this hardw
 ### 2.2 Weather
 
 Current conditions (temperature, a condition word, feels-like, wind) plus an hourly strip for
-the rest of today (temperature and rain chance per hour). Source is Open-Meteo, chosen because
-it needs no account or API key and covers Gdańsk with hourly data — a key to rotate is one more
-thing to break on a home box. Location is a fixed coordinate for Gdańsk, set in config.
+the rest of today. Each hour shows its temperature, an icon of the expected weather, the rain
+chance and the hour (owner decision 2026-09-06: the icon replaced an earlier bar whose height
+only re-encoded the temperature already printed). The per-hour icon uses the same WMO-code →
+icon-key mapping as the current conditions, so it needs a per-hour weather_code from the fetch.
+Source is Open-Meteo, chosen because it needs no account or API key and covers Gdańsk with
+hourly data — a key to rotate is one more thing to break on a home box. Location is a fixed
+coordinate for Gdańsk, set in config.
 
 ### 2.3 Buses
 
