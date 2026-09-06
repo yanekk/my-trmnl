@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-06 | 📌 | T10 review clean, no fix. `build_once` ensures the vehicle cache after the three concurrent sources (it needs the bus codes), so a cache miss adds the vehicle download in series — cold start only, bounded 15s. Watch first-render time on the device pass. |
 | 2026-09-06 | 📌 | T10: `adapters/vehicles` fetches `baza-pojazdow.json` → `{str(vehicleCode): VehicleInfo}`; `loop.VehicleCache` disk-caches, refetches only on an uncached number (an unknown refetches every cycle, owner-accepted); a DB failure keeps numbers. Pi 3.9 suite run in scratch `~/trmnl-t10-test`, live service untouched. Make/model on real buses still owner's device check. |
 | 2026-09-06 | 📌 | Owner changes (on-device, T09): service refresh 60s→120s (flash too frequent); overnight slow window set to 00:00–06:00, so fast runs 06:00→midnight. Needed a service window ending at midnight: config `end="00:00"` now allowed as the one end that sorts before start, mapped to hour 24 in `loop.service_hours`. 181 green Mac / 167 Pi; live `refresh_rate=120`. |
 | 2026-09-06 | 📌 | Owner change (on-device, T09): hourly weather strip ended at 23:00 near end of day. `_weather_hours` dropped its same-local-day filter — now takes the next WEATHER_HOURS points strictly after `now`, rolling across midnight into tomorrow's early hours (fetch already covers two days). DESIGN §2.2 updated; test `..._roll_across_midnight` added. 176 green (Mac), 162 (Pi). Deployed live. |

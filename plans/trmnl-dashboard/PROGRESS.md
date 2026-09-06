@@ -20,12 +20,13 @@ realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi 
 zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
 (`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
-This session: implemented T10 (bus make/model before the fleet number) — vehicle-DB adapter,
-disk cache with miss-triggered refetch, core join, renderer trim. 201 green Mac / 186 Pi 3.9.
-Not deployed (T10 render + the Pi service update fold into the next on-device pass). T09 still 🟡
-(owner's on-device check outstanding); do not treat it as having implementation work left.
-**Next `pir-work` will:** review T10 (it is 🔍, lowest 🔍). The reviewer did not write it —
-that is the point. T09 stays 🟡 for the owner's device check.
+This session: reviewed T10 — clean, no fix commit. 201 green Mac (re-run); Config/assemble call
+sites all updated; layout collision-free; deviation (skip empty brand/model) sound. Its on-device
+half (makers read right on real 227 rows) is unverified and folds into the owner's T09 device
+pass, alongside T10 deploy. T09 still 🟡 (owner's on-device check outstanding).
+**Next `pir-work` will:** nothing automatic — no 🔍 or actionable 🟡 remains. T09 and T10 both
+wait on the owner's on-device pass (deploy T10, point the device, judge cadence, confirm makers
+and reboot recovery). All other tasks are ✅.
 
 ## Tasks
 
@@ -42,13 +43,13 @@ done · ⛔ blocked, needs a human.
 | T05 | Weather adapter (Open-Meteo) | T02 | ✅ | Reviewed clean; fix 5a31177 added `timezone`/`forecast_days` request assertions. tz contract probed (safe only because request pins `timezone=GMT`). |
 | T06 | Bus adapter (ckan2 departures) | T02 | ✅ | Reviewed clean. Per-pole isolation tested (dead pole → others render; all-fail → Failure). A malformed 227 row drops its whole pole; poles fetched serially, 10s each. |
 | T07 | Google Calendar adapter (OAuth) | T02 | ✅ | Reviewed clean. OAuth consent hand-verified by owner 2026-09-05 (FINDINGS). Multi-day all-day gap handed to T08. |
-| T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix commit. 168 green. Probed past the doc: every wiring signature (adapters, App, make_server) matches the real callee, not just the loop stubs; UTC `_clock` is converted to Warsaw in `refresh_seconds`; each source bounded by its httpx timeout; `os.replace` keeps the image atomic; multi-day span clips exclusive `[d0,d_end)` to today/tomorrow. Three deviations authorized. |
+| T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix. Wiring signatures, Warsaw conversion, per-source timeouts, atomic `os.replace`, multi-day clip all probed; three deviations authorized. |
 | T09 | Deploy on home box + on-device verification | T08 | 🟡 | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`, all three sources verified live over HTTP. Docker deploy dropped (NAS/Pi have none). Outstanding, owner on the device: point the TRMNL at the Pi, judge cadence, confirm reboot recovery. Implementation complete; only the human device check remains. |
-| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | 🔍 | Built: `adapters/vehicles.fetch_vehicles`, `VehicleInfo`, `BusRow.maker`, `assemble(vehicles=)`, `loop.VehicleCache` (disk cache + miss-triggered refetch), config `vehicle_cache_path`, renderer `maker · number` trimming model but keeping brand+number. 201 green Mac / 186 Pi 3.9 (scratch dir, live service untouched); goldens regen'd + eyeballed. Deviation: parser skips records with empty brand/model instead of filtering `transportationType=="Autobus"`. Make/model reading right on real buses = owner's on-device check (with T09). |
+| T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ✅ | Reviewed clean, no fix. 201 green Mac (re-run); all `Config`/`assemble` call sites updated; the full-width vehicle line stays inside `[left,right]`, no collision. Probed: skip-empty-brand/model deviation safe (codes unique, trams never queried); cache `issubset` join correct; on a miss the vehicle fetch runs in series after the sources (cold-start latency, bounded 15s). On-device visual (makers on real 227 rows) unverified — folds into owner's T09 device pass, with T10 deploy. |
 
-**Review queue:** T10 (🔍, awaiting review). T09 is 🟡 — deployed and serving on the Pi; its
-implementation is done and only the owner's on-device check (point the device, reboot check)
-remains, held open at the owner's request.
+**Review queue:** empty. T09 and T10 are both implementation-complete and reviewed; both wait
+on the owner's on-device pass — deploy T10, point the device, judge cadence, confirm the makers
+read right on real 227 rows, and confirm reboot recovery. Record each dated in FINDINGS.
 
 ## Blocked on the user
 
