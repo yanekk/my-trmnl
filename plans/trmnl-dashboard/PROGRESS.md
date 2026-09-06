@@ -17,7 +17,8 @@ over-budget cell they walk past.
 systemd service (no Docker on ARMv6); it serves `:8080` with all three sources live, verified
 over HTTP. Owner render changes this session (diacritics, hourly icons, less-verbose layout,
 realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi (tomli,
-zip(strict), fromisoformat "Z"). 175 green on Docker 3.12, 161 on the Pi 3.9.
+zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
+(`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
 **Next `pir-work` will:** review T09 (deploy scripts + on-device outcome) once the owner has
 pointed the device at the Pi and done the reboot check.

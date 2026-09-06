@@ -264,25 +264,28 @@ Google consent flow completes, and that the refresh cadence feels right in the r
 |---|---|
 | OS (deploy) | Raspberry Pi Model B Rev 2 (original, ARMv6), Raspbian 11 (bullseye), 32-bit — confirmed at T09 by SSH. The owner's Synology DS218j NAS was ruled out (32-bit ARM, Python 3.8, no pip, no Docker, 500 MB RAM). |
 | OS (dev) | macOS (Apple Silicon). |
-| Language / runtime | Dev and the test command run Python 3.11+ in Docker. The Pi has no Docker (ARMv6) and runs the app **natively** on its system Python 3.9: Pillow from apt (prebuilt, no compiling), the pure-Python deps via pip in a `--system-site-packages` venv, tomli standing in for tomllib. The code therefore supports 3.9+ (requires-python `>=3.9`). |
-| Toolchain | Docker 28 present on dev Mac; Node present but not used for the product. |
-| **Deliberately absent** | No headless browser anywhere (deliberate, §7). ImageMagick not installed and not required — Pillow writes the BMP. System Python is 3.9 and is not used; 3.12 comes from the Docker image. |
+| Language / runtime | Dev and the tests run in a local virtualenv (`.venv`, Python 3.11+; this Mac's is 3.13) — no Docker. The Pi has no Docker (ARMv6) and runs the app **natively** on its system Python 3.9: Pillow from apt (prebuilt, no compiling), the pure-Python deps via pip in a `--system-site-packages` venv, tomli standing in for tomllib. The code supports 3.9+ (requires-python `>=3.9`). |
+| Toolchain | Node present but not used for the product. |
+| **Deliberately absent** | No Docker (removed 2026-09-06 — dev and tests are the local venv, deploy is native on the Pi). No headless browser anywhere (deliberate, §7). ImageMagick not installed and not required — Pillow writes the BMP. |
 
 **The test command.**
 
 ```
-docker compose run --rm test
+.venv/bin/python -m pytest -q
 ```
 
-which runs `python -m pytest -q --color=no` inside the project image. It is the only evidence
-a session may produce on its own. Pytest is quiet by default (a line of dots per suite, a
-one-line summary), prints failures in full with file, line and diff, and exits non-zero on
-failure. `--color=no` is set in the command because `FORCE_COLOR`/`CI` can otherwise force ANSI
-even when piped; nothing in this repo forces colour today, and the flag keeps it that way. To
-see per-test detail while debugging, add `-v` (or drop `-q`); do not commit that.
+run in the Mac's local virtualenv (set up once with `python3 -m venv .venv &&
+.venv/bin/pip install -e ".[test]"`). It is the only evidence a session may produce on its own.
+Pytest is quiet by default (a line of dots per suite, a one-line summary), prints failures in
+full with file, line and diff, and exits non-zero on failure. Add `-v` while debugging; do not
+commit that.
 
-Running without Docker (a local 3.12 venv with the pinned deps) is fine and produces the same
-result; Docker is named as the canonical command so the runtime is not in question.
+The renderer's golden tests compare pixels exactly, so the committed goldens are tied to the
+font rendering of the machine that generated them (this Mac). Regenerate on a layout change or a
+new machine with `REGEN_GOLDENS=1 .venv/bin/python -m pytest tests/render`. The deploy Pi's
+FreeType differs, so its 3.9 test run excludes them (`--ignore=tests/render`); run the suite
+there for any change touching external parsing or newer stdlib (see FINDINGS, the
+test-runtime-gap row).
 
 **Dependencies.** Standard library first. Allowed without asking: `pytest`, `Pillow`, an HTTP
 client (`httpx` or `requests`), the Google API client libraries for calendar, and

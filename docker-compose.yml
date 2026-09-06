@@ -1,7 +1,0 @@
-# The canonical test runner (DESIGN §5): `docker compose run --rm test`.
-# Docker is the dev/test runtime only. The deploy box (a Raspberry Pi, ARMv6) has
-# no Docker and runs the server natively — see deploy/ and README "Deploying".
-services:
-  test:
-    build: .
-    command: python -m pytest -q --color=no

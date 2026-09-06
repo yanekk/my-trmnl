@@ -8,28 +8,33 @@ fetches and displays it. The full design is in
 
 ## Running the tests
 
-```
-docker compose run --rm test
-```
-
-This runs `python -m pytest -q --color=no` inside the Python 3.12 image and is
-the one canonical test command. It exits non-zero on failure and prints failures
-in full. To see per-test detail while debugging, add `-v`; don't commit that.
-
-Running the suite in a local Python 3.12 virtualenv with the pinned deps works
-too and gives the same result:
+Set up a virtualenv once (Python 3.11+), then run the suite:
 
 ```
-pip install -e ".[test]"
-python -m pytest -q --color=no
+python3 -m venv .venv && .venv/bin/pip install -e ".[test]"
+.venv/bin/python -m pytest -q
 ```
+
+It exits non-zero on failure and prints failures in full. To see per-test detail
+while debugging, add `-v`.
+
+The renderer's golden-image tests compare pixels exactly, so the committed goldens
+are tied to the font rendering of the machine that made them (this dev Mac). If you
+change the layout — or run the tests on another machine — regenerate them there:
+
+```
+REGEN_GOLDENS=1 .venv/bin/python -m pytest tests/render
+```
+
+The deploy Pi runs Python 3.9; for changes that parse external data or touch newer
+stdlib, also run the suite on the Pi, skipping the machine-specific render goldens:
+`.venv/bin/python -m pytest --ignore=tests/render`.
 
 ## Deploying to the box
 
 The always-on box is a Raspberry Pi on the same LAN as the device (never exposed to
 the internet — DESIGN §5.2). The Pi has no Docker, so the server runs **natively**
-as a systemd service; Docker is only the dev/test runtime (above). One command from
-a dev machine deploys or updates it.
+as a systemd service. One command from a dev machine deploys or updates it.
 
 First, in the repo root (both git-ignored, so they never get committed):
 

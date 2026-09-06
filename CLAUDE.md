@@ -17,8 +17,10 @@ To see the render, convert the 1-bit BMP, e.g. `sips -s format png .local/screen
 --out /tmp/screen.png`. The device can point at this Mac's `:8080` to preview on real
 e-ink before deploying.
 
-Golden/rendering tests still run in Docker (`docker compose run --rm test`) because
-the goldens are pixel-exact to that runtime; a local render can differ by a hair.
+Run the tests here: `.venv/bin/python -m pytest -q`. The golden image tests compare
+pixels exactly, so the committed goldens are tied to this Mac's font rendering; if
+you change the layout (or move machines) regenerate them with `REGEN_GOLDENS=1
+.venv/bin/python -m pytest tests/render`.
 
 ## Deploying
 
@@ -32,9 +34,10 @@ runs the on-Pi install — a systemd service `trmnl-dashboard` serving `:8080`,
 enabled at boot with restart-on-failure. Scripts are in `deploy/`; full notes in
 README "Deploying to the box". Re-run the command to update (idempotent).
 
-Tests run in Docker: `docker compose run --rm test`. The deploy box is Python 3.9,
-so run the suite on the Pi too for any change that parses external data or uses
-newer stdlib (see `plans/trmnl-dashboard/FINDINGS.md`).
+The deploy box is Python 3.9, so for any change that parses external data or uses
+newer stdlib, also run the suite on the Pi (skipping the machine-specific render
+goldens): `ssh pi@192.168.0.185 'cd trmnl-dashboard && .venv/bin/python -m pytest
+--ignore=tests/render'` (see `plans/trmnl-dashboard/FINDINGS.md`).
 
 <!-- ─────────────────────────────────────────────────────────────────────────
      Appended by plan-implement-review. Everything above this line is the

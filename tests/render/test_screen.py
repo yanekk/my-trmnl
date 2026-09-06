@@ -4,17 +4,13 @@ comparing to committed reference PNGs instead of a person's eye.
 
 Regenerating the goldens (only when the layout genuinely changes):
 
-    docker compose run --rm -v "$PWD":/app -e REGEN_GOLDENS=1 test
-
-The `-v "$PWD":/app` bind mount is not optional: the compose service copies the
-source in at build time and has no mount of its own, so without it the rewritten
-goldens land inside the ephemeral container and `--rm` throws them away — the
-host files never change and the regen silently does nothing.
+    REGEN_GOLDENS=1 .venv/bin/python -m pytest tests/render
 
 That rewrites every golden from the current renderer, so run it deliberately and
-eyeball the results. Goldens must be generated in the same environment the tests
-run in (the Docker image), because FreeType hinting is what makes the pixels
-exact; a golden made elsewhere can differ by a pixel and fail here.
+eyeball the results. The goldens are pixel-exact to the machine that generated them
+(FreeType hinting decides the exact pixels), so they are tied to this dev Mac's
+Python/Pillow — regenerate them on whatever machine runs these tests. This is why
+the deploy Pi's test run excludes tests/render (DESIGN §5).
 """
 
 import os
@@ -126,7 +122,7 @@ def _assert_golden(img: Image.Image, name: str):
         return
     assert os.path.exists(path), (
         f"golden {name}.png missing — regenerate with "
-        f'`docker compose run --rm -v "$PWD":/app -e REGEN_GOLDENS=1 test`'
+        f"`REGEN_GOLDENS=1 .venv/bin/python -m pytest tests/render`"
     )
     golden = Image.open(path)
     assert (img.mode, img.size) == (golden.mode, golden.size)
@@ -222,9 +218,8 @@ def test_ellipsize_trims_to_width():
 def test_committed_startup_bmp_is_1bit_800x480():
     """The cold-start placeholder ships as a committed BMP the server serves
     before the first real image exists (DESIGN §2.6, §3.5). Regenerate it with:
-        docker compose run --rm -v "$PWD":/app --entrypoint python test \\
-            -c "from trmnl.render import screen; \\
-                screen.save_bmp(screen.render_startup(), 'trmnl/render/startup.bmp')"
+        .venv/bin/python -c "from trmnl.render import screen; \\
+            screen.save_bmp(screen.render_startup(), 'trmnl/render/startup.bmp')"
     """
     path = os.path.join(os.path.dirname(screen.__file__), "startup.bmp")
     assert os.path.exists(path), "committed startup.bmp is missing"
