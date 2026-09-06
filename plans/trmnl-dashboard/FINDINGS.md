@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-06 | 📌 | The `dashboard` compose service bakes source at build (no source mount), so code changes reach a running container only after `docker compose up -d --build` (or `build` then `up`). `restart: always` also resurrects the stale container after a Docker daemon restart — a rebuild is what refreshes it. Previews used `-v "$PWD":/app`; the deployed image does not. |
 | 2026-09-06 | 🐞 | `_tracked` (letter-spaced headings) top-anchored each glyph, so accented capitals (Ń, Ś) dropped below the line. Fixed to baseline-anchor (`anchor="ls"` at y+ascent). Only the tracked labels were affected; plain `draw.text` was fine. All goldens regenerated. |
 | 2026-09-06 | 📌 | Owner change: hourly strip shows a per-hour weather icon (temp/icon/rain%/hour) instead of the temperature bar. Added `weather_code` to the hourly Open-Meteo fetch, `HourPoint.code` and `HourView.icon`; `assemble._icon_for` maps the WMO code (shared with current conditions). Null hourly code → -1 → fallback cloud, not a fetch failure. DESIGN §2.2 updated. 170 green. |
 | 2026-09-06 | 📌 | T09 deploy: `docker compose up -d` runs the `dashboard` service (`restart: always`, publishes 8080). Box mounts `config.toml`+`token.json` ro at `/config`, `trmnl-data` volume at `/data`; deploy config sets `image_path=/data/screen.bmp`, `token_path=/config/token.json`. `test` moved under profile `test`; `run --rm test` unaffected. On-device verification pending. |
