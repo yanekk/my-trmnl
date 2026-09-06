@@ -177,7 +177,14 @@ def _bus_rows(departures: list[Departure], now: datetime) -> list[BusRow]:
     "za N min". An empty result is a valid available region ("brak odjazdów")."""
     upcoming = sorted((d for d in departures if d.when >= now), key=lambda d: d.when)
     return [
-        BusRow(line=d.line, headsign=d.headsign, label=_bus_label(d.when, now, d.realtime))
+        BusRow(
+            line=d.line,
+            headsign=d.headsign,
+            label=_bus_label(d.when, now, d.realtime),
+            # An em dash where no vehicle is assigned (schedule-only), so every row
+            # draws the same shape (DESIGN §2.3, owner 2026-09-06).
+            vehicle=d.vehicle if d.vehicle else "—",
+        )
         for d in upcoming[:BUS_ROWS]
     ]
 

@@ -199,8 +199,19 @@ def _parse_pole(payload: dict, line: str) -> list[Departure]:
         # (SCHEDULED, or a missing status) is schedule-only, so a lost status field
         # degrades safely to a clock time rather than a false live countdown.
         realtime = row.get("status") == "REALTIME"
+        # `vehicleCode` is the fleet number painted on the bus (an int in the feed);
+        # null for a schedule-only run with no vehicle assigned. Stringify it here so
+        # the core and renderer never touch a raw number.
+        code = row.get("vehicleCode")
+        vehicle = str(code) if code is not None else None
         rows.append(
-            Departure(line=short_name, headsign=row["headsign"], when=when, realtime=realtime)
+            Departure(
+                line=short_name,
+                headsign=row["headsign"],
+                when=when,
+                realtime=realtime,
+                vehicle=vehicle,
+            )
         )
     return rows
 

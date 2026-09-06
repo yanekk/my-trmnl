@@ -169,7 +169,8 @@ def test_status_sets_the_realtime_flag():
     payload = {
         "departures": [
             {"routeShortName": "227", "headsign": "GPS",
-             "estimatedTime": "2026-09-05T19:10:00Z", "status": "REALTIME"},
+             "estimatedTime": "2026-09-05T19:10:00Z", "status": "REALTIME",
+             "vehicleCode": 3112},
             {"routeShortName": "227", "headsign": "Rozkład",
              "estimatedTime": "2026-09-05T19:52:00Z", "status": "SCHEDULED"},
             {"routeShortName": "227", "headsign": "BezStatusu",
@@ -182,6 +183,13 @@ def test_status_sets_the_realtime_flag():
         "GPS": True,
         "Rozkład": False,
         "BezStatusu": False,
+    }
+    # vehicleCode (an int in the feed) is stringified; absent → None (the core
+    # renders that as "—").
+    assert {d.headsign: d.vehicle for d in result} == {
+        "GPS": "3112",
+        "Rozkład": None,
+        "BezStatusu": None,
     }
 
 

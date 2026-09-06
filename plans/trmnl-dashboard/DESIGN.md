@@ -84,7 +84,10 @@ live countdown "za N min"; a schedule-only departure (SCHEDULED — no bus repor
 its timetable clock time, e.g. "09:52". The countdown-vs-clock format is the signal, so a clock
 time on the board always means "from the timetable, not yet tracked", matching the ZTM app.
 This replaced an earlier rule that chose the format by distance (a `near_minutes` threshold);
-`near_minutes` remains a config field but no longer affects the label. The list mixes both
+`near_minutes` remains a config field but no longer affects the label. Under each time, in the
+small attribution-sized font, is the vehicle's fleet number (feed `vehicleCode`), or "—" when
+no vehicle is assigned yet (schedule-only); every row carries this line so the rows stay a
+consistent height (owner, 2026-09-06). The list mixes both
 directions/stops and is sorted by time, because the owner wants "what leaves next", not a
 per-stop board. This simpler list replaced an earlier per-stop boxed layout at the owner's
 request (§7). Rows have no separator rule between them (owner, 2026-09-06); the whitespace is

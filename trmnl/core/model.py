@@ -97,6 +97,8 @@ class Departure:
     headsign: str
     when: datetime
     realtime: bool
+    vehicle: str | None = None  # the fleet number on the bus (feed `vehicleCode`);
+    # None for a schedule-only run, which has no vehicle assigned yet
 
 
 @dataclass(frozen=True)
@@ -173,11 +175,15 @@ class WeatherView:
 @dataclass(frozen=True)
 class BusRow:
     """One departure ready to draw. `label` is the finished phrasing — "za 3 min"
-    or "08:49" — so the renderer makes no time decisions."""
+    or "08:49" — so the renderer makes no time decisions. `vehicle` is the finished
+    fleet-number text shown under the time — the number for a tracked bus, or "—"
+    for a schedule-only run with no vehicle assigned yet — so every row draws the
+    same shape and the list stays consistent."""
 
     line: str
     headsign: str
     label: str
+    vehicle: str
 
 
 @dataclass(frozen=True)

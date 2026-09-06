@@ -69,12 +69,15 @@ def _weather_view():
 
 
 def _buses_full():
+    # A mix of GPS-tracked rows (countdown + fleet number) and one schedule-only
+    # row (clock + "—"), so the golden exercises both the vehicle number and the
+    # no-vehicle dash.
     return [
-        BusRow(line="227", headsign="Jelitkowo", label="za 3 min"),
-        BusRow(line="227", headsign="Chełm Cienista", label="08:49"),
-        BusRow(line="227", headsign="Jelitkowo", label="08:57"),
-        BusRow(line="227", headsign="Chełm Cienista", label="09:04"),
-        BusRow(line="227", headsign="Jelitkowo", label="09:12"),
+        BusRow(line="227", headsign="Jelitkowo", label="za 3 min", vehicle="3112"),
+        BusRow(line="227", headsign="Chełm Cienista", label="za 9 min", vehicle="2762"),
+        BusRow(line="126", headsign="Wrzeszcz PKP", label="09:52", vehicle="—"),
+        BusRow(line="227", headsign="Jelitkowo", label="za 21 min", vehicle="2806"),
+        BusRow(line="227", headsign="Chełm Cienista", label="za 34 min", vehicle="2494"),
     ]
 
 
@@ -190,7 +193,7 @@ def test_empty_calendar_differs_from_unavailable():
 
 
 def test_long_headsign_and_many_events_do_not_overflow():
-    long_bus = [BusRow(line="227", headsign="X" * 200, label="za 3 min")]
+    long_bus = [BusRow(line="227", headsign="X" * 200, label="za 3 min", vehicle="3112")]
     many = [EventView(label=f"{8 + i:02d}:00", title=f"Zdarzenie numer {i} " * 5,
                       all_day=False) for i in range(30)]
     d = _dashboard(buses=long_bus, today=many, tomorrow=many)

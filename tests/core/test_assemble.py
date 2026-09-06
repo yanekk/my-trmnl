@@ -144,10 +144,10 @@ def test_allday_event_has_empty_label_and_sorts_first():
 def test_realtime_shows_countdown_scheduled_shows_clock():
     now = utc(2026, 1, 15, 12, 0)
     deps = [
-        Departure("227", "Chełm", now.replace(minute=3), realtime=True),  # GPS -> za 3 min
-        Departure("227", "Jelitkowo", now.replace(minute=40), realtime=True),  # GPS far -> still countdown
-        Departure("126", "Wrzeszcz", now.replace(minute=52), realtime=False),  # schedule -> clock
-        Departure("227", "Gone", utc(2026, 1, 15, 11, 30), realtime=True),  # past -> dropped
+        Departure("227", "Chełm", now.replace(minute=3), realtime=True, vehicle="3112"),  # GPS
+        Departure("227", "Jelitkowo", now.replace(minute=40), realtime=True, vehicle="2762"),  # GPS far
+        Departure("126", "Wrzeszcz", now.replace(minute=52), realtime=False),  # schedule, no vehicle
+        Departure("227", "Gone", utc(2026, 1, 15, 11, 30), realtime=True, vehicle="9001"),  # past -> dropped
     ]
     d = assemble(sources(bus=deps), now)
     assert "Gone" not in [r.headsign for r in d.buses]
@@ -155,6 +155,9 @@ def test_realtime_shows_countdown_scheduled_shows_clock():
     # schedule-only one is a clock time (12:52 UTC -> 13:52 local, +1). The clock
     # format is what marks it schedule-only.
     assert [r.label for r in d.buses] == ["za 3 min", "za 40 min", "13:52"]
+    # The vehicle number shows for tracked buses; the schedule-only one has none,
+    # so it draws "—" to keep every row the same shape.
+    assert [r.vehicle for r in d.buses] == ["3112", "2762", "—"]
 
 
 def test_departures_sorted_and_capped():

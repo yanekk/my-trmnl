@@ -361,11 +361,14 @@ def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
     line_f = _font(_MONO_SB, 22)
     dest_f = _font(_SANS, 18)
     time_f = _font(_MONO_SB, 20)
+    veh_f = _font(_SANS, 11)  # same small font as the attribution (owner, 2026-09-06)
 
     # No region title now, so rows start at the top of the box. No separator
-    # between rows (owner, 2026-09-06). Reserve the strip above the attribution.
-    rows_bottom = TOP_H - PAD - 20
-    row_h = 34
+    # between rows (owner, 2026-09-06). Each row is two lines — the departure and,
+    # under the time, the vehicle number — so row_h reserves both and every row is
+    # the same height. Reserve the strip above the attribution.
+    rows_bottom = TOP_H - PAD - 24
+    row_h = 38
     y = PAD + 4
     for row in dash.buses:
         line_w = _text_width(row.line, line_f)
@@ -377,6 +380,9 @@ def _render_buses(draw: ImageDraw.ImageDraw, dash: Dashboard) -> None:
         dest_max = right - time_w - 12 - dest_x
         dest = _ellipsize("→ " + row.headsign, dest_f, dest_max)
         draw.text((dest_x, y + 2), dest, font=dest_f, fill=BLACK, anchor="lt")
+        # Vehicle number under the time, right-aligned, small — "—" when none, so
+        # every row draws the same shape.
+        draw.text((right, y + 24), row.vehicle, font=veh_f, fill=BLACK, anchor="rt")
         y += row_h
         if y > rows_bottom:
             break
