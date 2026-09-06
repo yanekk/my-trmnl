@@ -174,6 +174,32 @@ def test_golden_startup():
     _assert_golden(screen.render_startup(), "startup")
 
 
+def _weather_view_night():
+    # A night strip: a clear-night hour draws a moon and a mostly/partly-clear hour
+    # draws a moon-behind-cloud (T11), with unchanged non-clear icons mixed in so
+    # the golden proves only the two clear keys switched glyph.
+    return WeatherView(
+        temp_c=9,
+        condition="Bezchmurnie",
+        icon="moon",
+        feels_like_c=7,
+        wind_kmh=10,
+        hours=[
+            HourView(label="20", temp_c=12, rain_pct=0, icon="moon"),
+            HourView(label="21", temp_c=11, rain_pct=0, icon="part-cloud-night"),
+            HourView(label="22", temp_c=11, rain_pct=10, icon="cloud"),
+            HourView(label="23", temp_c=10, rain_pct=20, icon="rain"),
+            HourView(label="00", temp_c=10, rain_pct=0, icon="moon"),
+            HourView(label="01", temp_c=9, rain_pct=0, icon="part-cloud-night"),
+        ],
+    )
+
+
+def test_golden_night_icons():
+    d = _dashboard(weather=_weather_view_night())
+    _assert_golden(screen.render(d), "night_icons")
+
+
 # --- empty is not the same as unavailable (DESIGN §2.6) ---------------------
 
 

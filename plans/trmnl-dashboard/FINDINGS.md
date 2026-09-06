@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-06 | 📌 | T11 built: `is_day` added to the Open-Meteo fetch → `WeatherData`/`HourPoint` bools; core `_icon_for(code,is_day)` picks moon/part-cloud-night after dark, else unchanged. Moon glyph drawn filled (an outline crescent is unreadable at r=20). 207 Mac / 191 Pi 3.9. After-dark on device unverified. |
 | 2026-09-06 | 📌 | T11 probe: Open-Meteo returns `is_day` (1 day / 0 night) for both `current` and `hourly` when the request asks for it; the hourly value flips across sunrise. Confirmed live on the Mac. So night icons need only add `is_day` to the fetch — no new source. Null → treat as day. |
 | 2026-09-06 | ✅ | On-device pass (owner) after deploying T10 to the Pi: makes/models read right on real tracked 227 rows ("Solaris Urbino 12 · 2520" etc.), refresh cadence good (`refresh_rate=120`), reboot recovers on its own. Closes T09's device checks and T10's on-device half. Whole dashboard verified end to end on real e-ink. |
 | 2026-09-06 | 📌 | T10 review clean, no fix. `build_once` ensures the vehicle cache after the three concurrent sources (it needs the bus codes), so a cache miss adds the vehicle download in series — cold start only, bounded 15s. Watch first-render time on the device pass. |

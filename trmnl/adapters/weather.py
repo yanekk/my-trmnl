@@ -35,10 +35,13 @@ _TIMEOUT_S = 10.0
 # naive ISO strings plus utc_offset_seconds=0); we attach UTC tzinfo and leave the
 # UTC→Europe/Warsaw conversion to the core. Units are pinned metric explicitly so a
 # change to Open-Meteo's defaults can never silently switch them (DESIGN §2.2).
-_CURRENT = "temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
+# is_day (1 by day, 0 at night) lets the core show a moon instead of a sun for a
+# clear sky after dark (DESIGN §2.2, T11). It costs nothing extra — same request.
+_CURRENT = "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"
 # weather_code per hour drives the hourly strip's icons (the core maps it to an
 # icon key, same as the current conditions); temperature and precip stay too.
-_HOURLY = "temperature_2m,precipitation_probability,weather_code"
+# is_day is per-hour so each strip column can show a moon or a sun on its own.
+_HOURLY = "temperature_2m,precipitation_probability,weather_code,is_day"
 
 # Two days of hourly data guarantees the whole of today's Europe/Warsaw calendar
 # day is covered whichever side of a UTC day boundary "now" falls; the core keeps
@@ -82,6 +85,14 @@ def fetch_weather(
         return Failure(f"weather: unparseable body: {exc}")
 
 
+def _is_day(value) -> bool:
+    """Open-Meteo's is_day flag (1 by day, 0 at night) as a bool. A null or absent
+    value is treated as day — draw the sun — the safe fallback (DESIGN §2.2, §2.6),
+    never a `Failure`. The same spirit as a null weather code falling back to the
+    neutral cloud: the day/night flag is cosmetic, so it never fails a fetch."""
+    return True if value is None else int(value) == 1
+
+
 def _parse(payload: dict) -> WeatherData:
     """Turn a decoded Open-Meteo response into `WeatherData`. Any missing key,
     misaligned array, or non-numeric value raises (KeyError/TypeError/ValueError)
@@ -94,6 +105,11 @@ def _parse(payload: dict) -> WeatherData:
     temps = hourly["temperature_2m"]
     probs = hourly["precipitation_probability"]
     codes = hourly["weather_code"]
+    # is_day is read leniently: a wholly-absent array (or a null in it) falls back
+    # to day per hour rather than failing the fetch, so an older cached response
+    # that predates this field still renders (DESIGN §2.6). The required arrays
+    # above still drive the length check.
+    days = hourly.get("is_day", [])
 
     points: list[HourPoint] = []
     # Mismatched array lengths are a malformed body, not a silent truncation.
@@ -102,8 +118,11 @@ def _parse(payload: dict) -> WeatherData:
     # Open-Meteo returns these arrays index-aligned.
     if not (len(times) == len(temps) == len(probs) == len(codes)):
         raise ValueError("hourly arrays have mismatched lengths")
-    for iso, temp, prob, code in zip(times, temps, probs, codes):
+    for i, (iso, temp, prob, code) in enumerate(zip(times, temps, probs, codes)):
         when = datetime.fromisoformat(iso).replace(tzinfo=timezone.utc)
+        # Index defensively: a short or absent is_day array leaves later hours as
+        # day rather than raising, matching the null → day fallback above.
+        day_flag = days[i] if i < len(days) else None
         # precipitation_probability is legitimately null for hours past the model's
         # probability horizon; those hours are never today, so a missing chance
         # reads as 0% rather than failing the whole fetch. A null temperature, by
@@ -117,6 +136,7 @@ def _parse(payload: dict) -> WeatherData:
                 temp_c=round(temp),
                 rain_pct=round(prob or 0),
                 code=int(code) if code is not None else -1,
+                is_day=_is_day(day_flag),
             )
         )
 
@@ -125,5 +145,6 @@ def _parse(payload: dict) -> WeatherData:
         condition_code=int(current["weather_code"]),
         feels_like_c=round(current["apparent_temperature"]),
         wind_kmh=round(current["wind_speed_10m"]),
+        is_day=_is_day(current.get("is_day")),
         hourly=points,
     )

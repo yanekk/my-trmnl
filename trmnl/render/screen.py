@@ -236,6 +236,31 @@ def _icon_sun(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int) -> None:
 _RAYS = ((0, -10), (7, -7), (10, 0), (7, 7), (0, 10), (-7, 7), (-10, 0), (-7, -7))
 
 
+def _icon_moon(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int) -> None:
+    """A crescent moon: a filled disc with a second, offset disc cut back out of it
+    in white, leaving a crescent (DESIGN §2.2, T11). Filled rather than outlined
+    like `_icon_sun` on purpose — an outline crescent is two nested arcs that read
+    as a blob at the strip's small icon size on 1-bit e-ink, whereas a solid
+    crescent stays legible. The carving disc is offset up and to the right, so the
+    crescent opens toward the lower-left. Owner verifies it reads as a moon on the
+    real panel (T11 'Needs a person')."""
+    rr = int(r * 0.62)
+    d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=BLACK)
+    off = int(rr * 0.55)  # carve-disc centre offset; ~0.78·rr between centres
+    d.ellipse(
+        [cx - rr + off, cy - rr - off, cx + rr + off, cy + rr - off], fill=WHITE
+    )
+
+
+def _icon_part_cloud_night(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int) -> None:
+    """A moon behind a cloud — the night form of `_icon_part_cloud`, mirroring it
+    exactly with the moon in place of the sun. The cloud is drawn last so its white
+    body erases the moon where they overlap, leaving the moon peeking out top-right
+    (DESIGN §2.2, T11)."""
+    _icon_moon(d, cx + r // 3, cy - r // 3, int(r * 0.7))
+    _icon_cloud(d, cx, cy + r // 4, int(r * 0.8))
+
+
 def _icon_cloud(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int) -> None:
     """A rounded cloud outline centred on (cx, cy), fitting roughly in ±r."""
     w = r
@@ -289,7 +314,9 @@ def _icon_storm(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int) -> None:
 
 _ICONS = {
     "sun": _icon_sun,
+    "moon": _icon_moon,
     "part-cloud": _icon_part_cloud,
+    "part-cloud-night": _icon_part_cloud_night,
     "cloud": _icon_cloud,
     "fog": _icon_fog,
     "drizzle": lambda d, cx, cy, r: _icon_drops(d, cx, cy, r, 3),

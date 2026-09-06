@@ -78,12 +78,25 @@ _WEATHER: dict[int, tuple[str, str]] = {
 }
 _WEATHER_FALLBACK = ("—", "cloud")
 
+# Day → night icon overrides. Only the two clear-sky icons change after dark
+# (owner decision 3, 2026-09-06): a clear sky is a moon, a mostly/partly-clear sky
+# a moon-behind-cloud. Every other icon (cloud, fog, drizzle, rain, snow, storm)
+# reads the same at night, so it is absent here and returned unchanged. This is the
+# one place the day/night flag is read; the renderer only draws the resolved key.
+_NIGHT_ICON: dict[str, str] = {"sun": "moon", "part-cloud": "part-cloud-night"}
 
-def _icon_for(code: int) -> str:
+
+def _icon_for(code: int, is_day: bool = True) -> str:
     """The renderer icon key for a WMO weather code, or the fallback cloud for an
     unknown code. Used for both the current conditions and each hourly point, so
-    the strip's icons match the big current-weather icon."""
-    return _WEATHER.get(code, _WEATHER_FALLBACK)[1]
+    the strip's icons match the big current-weather icon.
+
+    At night (`is_day` False) the two clear-sky keys become their moon variants
+    (DESIGN §2.2, T11); every other key is identical day and night. `is_day`
+    defaults to True so a caller that does not care about the time of day, and the
+    missing-flag fallback, both get the daytime (sun) icon."""
+    key = _WEATHER.get(code, _WEATHER_FALLBACK)[1]
+    return key if is_day else _NIGHT_ICON.get(key, key)
 
 
 def assemble(
@@ -148,7 +161,7 @@ def assemble(
 
 def _weather_view(w: WeatherData, now: datetime) -> WeatherView:
     condition = _WEATHER.get(w.condition_code, _WEATHER_FALLBACK)[0]
-    icon = _icon_for(w.condition_code)
+    icon = _icon_for(w.condition_code, w.is_day)
     return WeatherView(
         temp_c=w.temp_c,
         condition=condition,
@@ -175,7 +188,7 @@ def _weather_hours(hourly: list[HourPoint], now: datetime) -> list[HourView]:
                     label=local.strftime("%H"),
                     temp_c=pt.temp_c,
                     rain_pct=pt.rain_pct,
-                    icon=_icon_for(pt.code),
+                    icon=_icon_for(pt.code, pt.is_day),
                 )
             )
     return rows[:WEATHER_HOURS]

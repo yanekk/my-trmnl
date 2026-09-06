@@ -8,7 +8,7 @@ the UTC->Europe/Warsaw conversion the core is responsible for.
 
 from datetime import datetime, timezone
 
-from trmnl.core.assemble import assemble
+from trmnl.core.assemble import _icon_for, assemble
 from trmnl.core.model import (
     ATTRIBUTION,
     BUS_ROWS,
@@ -280,6 +280,47 @@ def test_weather_hours_roll_across_midnight():
     # 22, 23 local today then 00, 01, 02, 03 local tomorrow.
     assert len(hours) == 6
     assert [h.label for h in hours] == ["22", "23", "00", "01", "02", "03"]
+
+
+def test_icon_for_is_day_night_aware_only_for_clear_skies():
+    # The two clear-sky codes get a moon after dark; everything else is identical
+    # day and night (owner decision 3, T11).
+    assert _icon_for(0, is_day=True) == "sun"
+    assert _icon_for(0, is_day=False) == "moon"
+    assert _icon_for(1, is_day=True) == "part-cloud"
+    assert _icon_for(2, is_day=True) == "part-cloud"
+    assert _icon_for(1, is_day=False) == "part-cloud-night"
+    assert _icon_for(2, is_day=False) == "part-cloud-night"
+    # A non-clear code, and an unknown code, are byte-for-byte the same at night.
+    assert _icon_for(61, is_day=False) == _icon_for(61, is_day=True) == "rain"
+    assert _icon_for(3, is_day=False) == _icon_for(3, is_day=True) == "cloud"
+    assert _icon_for(1234, is_day=False) == _icon_for(1234, is_day=True) == "cloud"
+    # is_day defaults to day, so an old caller gets the sun.
+    assert _icon_for(0) == "sun"
+
+
+def test_current_icon_uses_the_day_night_flag():
+    day = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, is_day=True, hourly=[])
+    night = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, is_day=False, hourly=[])
+    assert assemble(sources(weather=day), utc(2026, 1, 15, 12)).weather.icon == "sun"
+    assert assemble(sources(weather=night), utc(2026, 1, 15, 20)).weather.icon == "moon"
+    # The condition word is unchanged by night — only the glyph flips.
+    assert assemble(sources(weather=night), utc(2026, 1, 15, 20)).weather.condition == "Bezchmurnie"
+
+
+def test_hourly_strip_icons_follow_each_hours_day_night_flag():
+    # A clear-sky code (0) and a partly-clear code (1) each shown once by day and
+    # once by night: the per-hour flag, not one global value, drives the strip.
+    now = utc(2026, 1, 15, 7, 30)
+    hourly = [
+        HourPoint(time=utc(2026, 1, 15, 8), temp_c=10, rain_pct=0, code=0, is_day=True),
+        HourPoint(time=utc(2026, 1, 15, 9), temp_c=10, rain_pct=0, code=1, is_day=True),
+        HourPoint(time=utc(2026, 1, 15, 10), temp_c=10, rain_pct=0, code=0, is_day=False),
+        HourPoint(time=utc(2026, 1, 15, 11), temp_c=10, rain_pct=0, code=1, is_day=False),
+    ]
+    w = WeatherData(temp_c=8, condition_code=0, feels_like_c=6, wind_kmh=10, is_day=True, hourly=hourly)
+    icons = [h.icon for h in assemble(sources(weather=w), now).weather.hours]
+    assert icons == ["sun", "part-cloud", "moon", "part-cloud-night"]
 
 
 def test_hourly_icon_maps_per_hour_code_with_fallback():

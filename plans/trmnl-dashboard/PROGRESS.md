@@ -20,11 +20,11 @@ realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi 
 zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
 (`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
 **Last updated:** 2026-09-06
-This session: T00–T10 all ✅ and hand-verified on the device (makers, cadence, reboot). Then
-planned T11 (moon icons at night) as a Phase 4 amendment — DESIGN §2.2 + a decision, task file,
-PLAN row. Probed on this machine: Open-Meteo returns a per-hour/current `is_day` flag (FINDINGS).
-Phase 4 rides the normal build/review alternation with no separate plan-review (same as T10).
-**Next `pir-work` will:** implement T11 (it is the only ⬜, deps T02/T03/T05 all ✅).
+This session: implemented T11 (moon icons at night). `is_day` added to the Open-Meteo fetch and
+to WeatherData/HourPoint; the day/night icon choice lives in the pure core (`_icon_for(code,
+is_day)`: sun→moon, part-cloud→part-cloud-night at night, every other key unchanged); two new
+renderer glyphs. 207 green Mac / 191 Pi 3.9 (render excluded). On-device after-dark check unverified.
+**Next `pir-work` will:** review T11 (the only 🔍).
 
 ## Tasks
 
@@ -44,10 +44,10 @@ done · ⛔ blocked, needs a human.
 | T08 | Composition root, refresh loop, config, degradation | T03,T04,T05,T06,T07 | ✅ | Reviewed clean, no fix. Wiring signatures, Warsaw conversion, per-source timeouts, atomic `os.replace`, multi-day clip all probed; three deviations authorized. |
 | T09 | Deploy on home box + on-device verification | T08 | ✅ | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`. On-device verified by owner 2026-09-06 (FINDINGS): device shows the board, cadence good (`refresh_rate=120`), reboot recovers. Docker dropped (NAS/Pi have none). |
 | T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ✅ | Reviewed clean, no fix. All `Config`/`assemble` call sites updated; vehicle line stays inside `[left,right]`, no collision; skip-empty-brand/model deviation safe. On-device visual verified by owner 2026-09-06 (FINDINGS): makers read right on real 227 rows. |
-| T11 | Moon icons at night (day/night-aware weather icons) | T02,T03,T05 | ⬜ | Owner-added 2026-09-06. Open-Meteo `is_day` (fetched already, verified present) drives the icon in the pure core: sun→moon, part-cloud→moon-behind-cloud at night; every other icon unchanged. Two new line-art glyphs in the renderer, which stays day/night unaware. Only the hourly strip is drawn (big current icon removed 2026-09-06), so that is the visible change. Task file has the three owner decisions. |
+| T11 | Moon icons at night (day/night-aware weather icons) | T02,T03,T05 | 🔍 | Built: `is_day` in weather fetch + WeatherData/HourPoint; `_icon_for(code,is_day)` maps sun→moon, part-cloud→part-cloud-night at night, else unchanged; two renderer glyphs, one night golden. +9 tests; 207 Mac / 191 Pi 3.9. Deviation: moon drawn filled (disc minus disc), not outline like `_icon_sun` — an outline crescent is unreadable at r=20 on 1-bit. On-device after-dark check unverified (folded into next pass). |
 
-**Review queue:** empty. T00–T10 are ✅ and hand-verified on the device. T11 is ⬜ (Phase 4
-amendment) with all deps ✅ — the next `pir-work` implements it, then a later session reviews it.
+**Review queue:** T11 (🔍) — day/night weather icons. The next `pir-work` reviews it with fresh
+eyes. Its on-device after-dark half is unverified and folds into the next on-device pass.
 
 ## Blocked on the user
 

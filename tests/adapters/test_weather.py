@@ -87,6 +87,40 @@ def test_hourly_points_are_tz_aware_utc_and_typed():
     assert isinstance(result.feels_like_c, int)
 
 
+def test_is_day_parsed_as_bool_for_current_and_every_hour():
+    # The fixture carries both day and night hours (hour 0 UTC is night, midday is
+    # day), so this proves is_day is read per point as a bool, not one global value.
+    result = fetch_weather(LAT, LON, NOW, _StubClient(payload=_fixture()))
+    assert isinstance(result, WeatherData)
+    assert result.is_day is True  # current time is midday
+    assert result.hourly[0].is_day is False  # 00:00 UTC — night
+    for pt in result.hourly:
+        assert isinstance(pt.is_day, bool)  # never 0/1 ints leaking through
+    # At least one day and one night hour, so the flag genuinely varies.
+    flags = [pt.is_day for pt in result.hourly]
+    assert True in flags and False in flags
+
+
+def test_null_or_absent_is_day_falls_back_to_day_not_failure():
+    # A null current flag, a null hour flag, and a wholly-absent hourly array all
+    # fall back to day (True) rather than failing the fetch (DESIGN §2.6).
+    bad = _fixture()
+    bad["current"]["is_day"] = None
+    bad["hourly"]["is_day"][0] = None
+    result = fetch_weather(LAT, LON, NOW, _StubClient(payload=bad))
+    assert isinstance(result, WeatherData)
+    assert result.is_day is True
+    assert result.hourly[0].is_day is True
+
+    missing = _fixture()
+    del missing["hourly"]["is_day"]
+    del missing["current"]["is_day"]
+    result2 = fetch_weather(LAT, LON, NOW, _StubClient(payload=missing))
+    assert isinstance(result2, WeatherData)
+    assert result2.is_day is True
+    assert all(pt.is_day is True for pt in result2.hourly)
+
+
 def test_null_precipitation_probability_reads_as_zero():
     # The fixture's last two hours carry a null chance (real far-horizon shape);
     # they must parse as 0%, not fail the whole fetch.
@@ -114,8 +148,8 @@ def test_request_asks_for_metric_units_and_the_given_point():
     # coverage depends on and the field lists the parser reads.
     assert params["timezone"] == "GMT"
     assert params["forecast_days"] == 2
-    assert params["current"] == "temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
-    assert params["hourly"] == "temperature_2m,precipitation_probability,weather_code"
+    assert params["current"] == "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"
+    assert params["hourly"] == "temperature_2m,precipitation_probability,weather_code,is_day"
     # A timeout is always set so one slow source cannot stall the image (§2.6).
     assert client.calls[0]["timeout"] is not None
 

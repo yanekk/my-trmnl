@@ -61,12 +61,18 @@ class HourPoint:
     """One hour of the forecast. `time` is tz-aware (UTC as fetched); the core
     localizes it and keeps only the rest of today (DESIGN §2.2). `code` is that
     hour's Open-Meteo WMO weather code; the core maps it to an icon key for the
-    hourly strip, the same mapping the current conditions use."""
+    hourly strip, the same mapping the current conditions use.
+
+    `is_day` is Open-Meteo's per-hour day/night flag (True by day, False after
+    dark); the core uses it to pick a moon over a sun for a clear sky (DESIGN §2.2,
+    T11). It defaults to True (day) — today's behaviour and the safe fallback for a
+    missing flag (DESIGN §2.6) — so construction that omits it is unaffected."""
 
     time: datetime
     temp_c: int
     rain_pct: int
     code: int
+    is_day: bool = True
 
 
 @dataclass(frozen=True)
@@ -79,6 +85,8 @@ class WeatherData:
     condition_code: int
     feels_like_c: int
     wind_kmh: int
+    is_day: bool = True  # current-conditions day/night flag (DESIGN §2.2, T11);
+    # True by day, the safe default for a missing flag (DESIGN §2.6)
     hourly: list[HourPoint] = field(default_factory=list)
 
 
