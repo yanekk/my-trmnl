@@ -1,3 +1,24 @@
+# my-trmnl — project notes
+
+An e-ink dashboard for a Seeed TRMNL device. Product docs live in `README.md` and
+`plans/trmnl-dashboard/DESIGN.md`; the working method is below the line.
+
+## Deploying
+
+The dashboard runs **natively (no Docker)** on a Raspberry Pi. Deploy or update it
+from this repo on a dev machine:
+
+    deploy/deploy.sh pi@192.168.0.185
+
+That rsyncs the code, copies the git-ignored `config.toml` and `token.json`, and
+runs the on-Pi install — a systemd service `trmnl-dashboard` serving `:8080`,
+enabled at boot with restart-on-failure. Scripts are in `deploy/`; full notes in
+README "Deploying to the box". Re-run the command to update (idempotent).
+
+Tests run in Docker: `docker compose run --rm test`. The deploy box is Python 3.9,
+so run the suite on the Pi too for any change that parses external data or uses
+newer stdlib (see `plans/trmnl-dashboard/FINDINGS.md`).
+
 <!-- ─────────────────────────────────────────────────────────────────────────
      Appended by plan-implement-review. Everything above this line is the
      project's own CLAUDE.md; everything below is the shared working method.
