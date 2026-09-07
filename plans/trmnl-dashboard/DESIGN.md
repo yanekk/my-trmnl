@@ -175,7 +175,23 @@ configured window is 06:00–00:00, so the slow overnight window is 00:00–06:0
 - **A data source is down or times out.** That region shows a short "niedostępne" (unavailable)
   notice; the other two regions render normally. Chosen over showing stale data because a wrong
   bus time is worse than an honest gap — you would miss the bus trusting it. Each adapter has a
-  timeout so one slow source cannot delay the whole image.
+  timeout so one slow source cannot delay the whole image. The weather source is the one
+  exception (next bullet): a few-minutes-old temperature is neither wrong nor misleading the way a
+  stale bus time is, so weather rides out a brief outage instead of blanking. Buses and calendar
+  keep blanking immediately.
+- **The weather source specifically holds its last good reading briefly (T12, owner 2026-09-07).**
+  On a weather fetch failure the loop retries within the same cycle with a 5/10/15-second backoff
+  — at most four attempts and about 30 seconds, a finite schedule so a flaky service can never
+  stall the board (the hard cap). If every attempt still fails, the last successful reading keeps
+  being shown for up to 30 minutes, drawn identically to a fresh one with no staleness marker,
+  because within that window it is still useful at a glance. Only after 30 minutes with no success
+  does the weather region fall back to "niedostępne". The hold is in memory, so if the service
+  restarts mid-outage there is nothing to hold and weather shows "niedostępne" until the first
+  success (accepted — restarts are rare and self-heal). The retry and the hold live in the
+  composition root (`server/loop.py`), not the pure core: the core still only turns `WeatherData`
+  into a view or a `Failure` into "niedostępne", and the 30-minute age check takes `now` as an
+  argument (DESIGN §3.1). This is separate from the last-good *image* below: a held reading is a
+  normal source value, so the image is still rebuilt and published fresh each cycle.
 - **The server cannot build an image at all.** The device keeps showing the last image it drew
   (e-ink persists with no power), and the server logs the failure. The next successful cycle
   replaces it. We never push a blank or error-only screen when a last-good image exists.
@@ -424,6 +440,19 @@ Google account settings; the calendar region then shows "unavailable" until re-a
   gains only the glyphs. Only the strip is drawn today — the big current-conditions icon was
   removed 2026-09-06 — but the core function is made day/night aware uniformly so the value is
   correct if a big icon ever returns.
+- **2026-09-07 (T12) — Weather holds its last good reading for ~30 minutes, with in-cycle
+  retries; buses and calendar do not.** The owner saw the weather box blank to "niedostępne" for
+  one refresh on a transient Open-Meteo 503. A few-minutes-old temperature is still useful and not
+  misleading, unlike a stale bus time, so weather rides out a brief outage: retry the fetch with a
+  5/10/15s backoff (four attempts, ~30s, a finite hard cap so a flaky service can never stall the
+  board), and if it still fails, keep showing the last reading for up to 30 minutes with no
+  staleness marker, then fall back to "niedostępne". Scoped to weather only — buses and calendar
+  keep blanking immediately, because the "wrong data is worse than a gap" rule (§2.6) still holds
+  for a bus time. Considered and declined: a staleness marker (rejected for a calmer board — a
+  reading at most 30 minutes old needs no caveat); a disk-persisted hold (rejected as
+  over-engineering — an in-memory hold is simpler and a restart mid-outage is rare and self-heals).
+  The hold and retry live in the composition root, not the core, so the boundary and its guard test
+  are untouched; the age check takes `now` as an argument (§3.1).
 
 ---
 

@@ -1,8 +1,8 @@
 # Implementation plan
 
-11 tasks in 5 phases. Each has a file in [tasks/](tasks/) with its goal, the files it touches,
-the interfaces it defines, and what "done" means. T10 is an owner-added enhancement (2026-09-06),
-appended after the original ten shipped.
+12 tasks in 5 phases. Each has a file in [tasks/](tasks/) with its goal, the files it touches,
+the interfaces it defines, and what "done" means. T10–T12 are owner-added enhancements
+(2026-09-06/07), appended after the original ten shipped.
 
 Track state in [PROGRESS.md](PROGRESS.md). Read [DESIGN.md](DESIGN.md) first.
 
@@ -90,6 +90,7 @@ no separate plan-review (the plan was already being built when these were added)
 |---|---|---|
 | [T10](tasks/T10-vehicle-info.md) | Bus manufacturer + model before the fleet number, from the ZTM vehicle database (disk-cached, miss-triggered refetch) | T03, T06, T08 |
 | [T11](tasks/T11-night-icons.md) | Moon icons at night — day/night-aware weather icons (Open-Meteo `is_day`; sun→moon, part-cloud→moon-behind-cloud; other icons unchanged) | T02, T03, T05 |
+| [T12](tasks/T12-weather-resilience.md) | Weather-source resilience — hold the last good reading for ~30 min across a brief outage, with in-cycle 5/10/15s retries; weather only, buses and calendar unchanged | T05, T08 |
 
 ---
 
@@ -110,7 +111,7 @@ owner's hands, so start it early in Phase 2 to leave room for that round-trip.
 |---|---|
 | **Heavy** | T03 (laying the whole layout out in Pillow against the mock), T00 (physical unknowns, hand-verified) |
 | **Medium** | T02, T04, T06, T07, T08 |
-| **Light** | T01, T05, T09 |
+| **Light** | T01, T05, T09, T12 |
 
 Where it will overrun: T03, because pixel layout and 1-bit dithering are fiddly and the golden
 images have to be regenerated whenever the layout genuinely changes; and T07, because Google
