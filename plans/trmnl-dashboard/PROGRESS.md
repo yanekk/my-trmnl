@@ -23,10 +23,10 @@ zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local
 This session: reviewed T12 (weather-source resilience) — clean, no fix. Retry cap, 30-min hold
 (age from `now`), weather-only isolation and the boundary all verified; probed off-by-one, the
 inclusive window boundary, clock-backwards and concurrency. 218 green Mac, 200 Pi 3.9 (re-run).
-Still pending: neither T11 (moon icons) nor T12 is deployed to the Pi — the live service runs
-pre-T11 code (`deploy/deploy.sh pi@192.168.0.185`).
-**Next `pir-work` will:** nothing queued — all tasks ✅. Open threads are a deploy and two
-opportunistic on-device glances (below); none is a `pir-work` task.
+T11 (moon icons) + T12 (weather hold) now deployed to the Pi (`deploy/deploy.sh pi@192.168.0.185`,
+2026-09-07): service active, serving `:8080`, `WeatherCache` confirmed in the running code.
+**Next `pir-work` will:** nothing queued — all tasks ✅. Only open threads are two opportunistic
+on-device glances (below); neither is a `pir-work` task.
 
 ## Tasks
 
@@ -49,10 +49,10 @@ done · ⛔ blocked, needs a human.
 | T11 | Moon icons at night (day/night-aware weather icons) | T02,T03,T05 | ✅ | Reviewed clean. Day/night decision pure-core, renderer holds no clock. On-device after-dark half (moon reads as moon on real e-ink) still unverified; not yet deployed. |
 | T12 | Weather-source resilience: hold last-good ~30 min + in-cycle retries | T05,T08 | ✅ | Reviewed clean, no fix. 4 attempts / 5·10·15s / hold ≤30 min inclusive, age from `now` arg — all match the doc; boundary guard passes, core/render/goldens untouched. Probed off-by-one (no trailing sleep), clock-backwards (benign hold), weather-only isolation, cold-start Failure — all covered. 218 green Mac, 200 Pi 3.9 (re-run). On-device glance opportunistic, not required. |
 
-**Review queue:** empty — all tasks ✅. Open threads (none is a `pir-work` task): deploy T11+T12 to
-the Pi (`deploy/deploy.sh pi@192.168.0.185`); the device still runs pre-T11 code. Two opportunistic
-on-device glances fold into the next after-dark look — T11's crescent reads as a moon on real e-ink,
-and T12's weather box stays put (last reading, not "niedostępne") if Open-Meteo is caught erroring.
+**Review queue:** empty — all tasks ✅ and deployed. Open threads (neither is a `pir-work` task) are
+two opportunistic on-device glances that fold into the next after-dark look — T11's crescent reads as
+a moon on real e-ink, and T12's weather box stays put (last reading, not "niedostępne") if Open-Meteo
+is caught erroring.
 
 ## Blocked on the user
 
