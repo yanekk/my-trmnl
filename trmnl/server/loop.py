@@ -34,7 +34,7 @@ import threading
 import time as _time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Callable, Iterable
 
 import httpx
@@ -56,6 +56,21 @@ from trmnl.render.screen import RegionLabels
 from trmnl.server.app import App, make_server
 
 log = logging.getLogger(__name__)
+
+
+# --- weather resilience knobs (DESIGN §2.6, T12) ----------------------------
+
+# Waits between weather-fetch attempts within one cycle. Finite and short on
+# purpose: it is the hard cap the owner asked for, so a flaky Open-Meteo can never
+# stall the board. Four attempts total (one initial + three retries), ~30s of
+# backoff; the 120s cadence leaves room even if every attempt hits its timeout.
+WEATHER_RETRY_BACKOFF_S: tuple[int, ...] = (5, 10, 15)
+
+# How long a last successful weather reading keeps being shown across an outage,
+# measured from the fetch that produced it. A few-minutes-old temperature is still
+# useful and not misleading the way a stale bus time is (DESIGN §2.6); after this
+# window with no success the region falls back to "niedostępne".
+WEATHER_HOLD = timedelta(minutes=30)
 
 
 # --- dependencies the composition root holds --------------------------------
@@ -82,11 +97,15 @@ class Deps:
         creds=None,
         stop_ids: list[int] | None = None,
         vehicles: "VehicleCache | None" = None,
+        weather: "WeatherCache | None" = None,
     ):
         self.http = http
         self.creds = creds
         self._stop_ids: list[int] | None = list(stop_ids) if stop_ids is not None else None
         self.vehicles = vehicles
+        # None keeps the old single-fetch path (existing loop tests pass None); a
+        # WeatherCache adds the in-cycle retries and the last-good hold (T12).
+        self.weather = weather
 
     def stop_ids(self, cfg: Config) -> list[int]:
         if self._stop_ids is not None:
@@ -180,6 +199,54 @@ class VehicleCache:
         return self._by_code
 
 
+class WeatherCache:
+    """The weather source with a brief last-good hold and in-cycle retries (T12,
+    DESIGN §2.6). Mirrors `VehicleCache`: the single request stays the adapter's
+    (`adapters.weather.fetch_weather`), while the retry loop and the held reading
+    are the composition root's, because the hold is state that must persist across
+    cycles and only a held object can carry it (the adapter is called fresh each
+    cycle) and the retry's sleeps belong beside it, out of the pure core.
+
+    In-memory only — a restart during an outage has nothing to hold, so weather is
+    "niedostępne" until the first success (accepted; restarts are rare, DESIGN §2.6).
+    `sleep` is injected so tests drive the backoff with no real waiting (DESIGN §3.1)."""
+
+    def __init__(self, *, sleep: Callable[[float], None] = _time.sleep) -> None:
+        self._sleep = sleep
+        # The last successful reading and the `now` it was fetched at, or None until
+        # the first success. The timestamp advances on every success, so a refreshed
+        # reading keeps for a fresh WEATHER_HOLD from when it was refreshed.
+        self._held: tuple[WeatherData, datetime] | None = None
+
+    def fetch(
+        self, cfg: Config, now: datetime, client: httpx.Client
+    ) -> "WeatherData | Failure":
+        """Attempt the weather fetch, retrying on any `Failure` with the fixed
+        backoff for at most len(WEATHER_RETRY_BACKOFF_S)+1 attempts. On any success
+        store (data, now) and return it. If every attempt fails, return the held
+        reading when one exists and is younger than WEATHER_HOLD (drawn as a normal
+        reading, no staleness marker), else the last `Failure` (→ "niedostępne").
+
+        Any `Failure` triggers a retry — network error, non-200 or unparseable body
+        alike; classifying them is not worth the complexity (DESIGN §2.6). The age
+        check takes `now` as an argument, never a clock read (DESIGN §3.1)."""
+        result: WeatherData | Failure = Failure("weather: not attempted")
+        for attempt in range(len(WEATHER_RETRY_BACKOFF_S) + 1):
+            result = weather.fetch_weather(cfg.lat, cfg.lon, now, client)
+            if not isinstance(result, Failure):
+                self._held = (result, now)
+                return result
+            # Sleep the next backoff before retrying, but never after the last
+            # attempt — that trailing wait would buy nothing and just delay the fallback.
+            if attempt < len(WEATHER_RETRY_BACKOFF_S):
+                self._sleep(WEATHER_RETRY_BACKOFF_S[attempt])
+        if self._held is not None:
+            data, fetched_at = self._held
+            if now - fetched_at <= WEATHER_HOLD:
+                return data
+        return result
+
+
 @dataclass(frozen=True)
 class BuildResult:
     """The outcome of one `build_once`. `sources` carries what each adapter
@@ -261,7 +328,11 @@ def _safe(name: str, fn: Callable, *args):
 
 
 def _fetch_weather(cfg: Config, now: datetime, deps: Deps):
-    return weather.fetch_weather(cfg.lat, cfg.lon, now, deps.http)
+    # With no cache wired (tests, and any single-fetch caller) keep the old direct
+    # path; a WeatherCache adds the retries and the last-good hold (T12, DESIGN §2.6).
+    if deps.weather is None:
+        return weather.fetch_weather(cfg.lat, cfg.lon, now, deps.http)
+    return deps.weather.fetch(cfg, now, deps.http)
 
 
 def _fetch_bus(cfg: Config, now: datetime, deps: Deps):
@@ -366,7 +437,12 @@ def main(argv: list[str] | None = None) -> None:
         )
 
     http = httpx.Client()
-    deps = Deps(http=http, creds=creds, vehicles=VehicleCache(cfg.vehicle_cache_path))
+    deps = Deps(
+        http=http,
+        creds=creds,
+        vehicles=VehicleCache(cfg.vehicle_cache_path),
+        weather=WeatherCache(),
+    )
     service = service_hours(cfg)
 
     app = App(

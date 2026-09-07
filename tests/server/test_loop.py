@@ -444,3 +444,171 @@ def test_build_once_annotates_rows_with_makers_from_the_cache(tmp_path, monkeypa
 
     assert seen["buses"][0].maker == "Solaris Urbino 12"
     assert seen["buses"][0].vehicle == "2520"
+
+
+# --- WeatherCache: in-cycle retries + last-good hold (DESIGN §2.6, T12) ------
+
+
+def _wdata(temp_c=12):
+    """A minimal WeatherData standing in for a successful fetch."""
+    return WeatherData(
+        temp_c=temp_c, condition_code=3, feels_like_c=10, wind_kmh=15, hourly=[]
+    )
+
+
+class _WeatherStub:
+    """A stub for weather.fetch_weather that returns a scripted sequence of results
+    and counts its calls; the last scripted result repeats once exhausted, so a
+    single Failure means "always fails". Signature matches the adapter."""
+
+    def __init__(self, results):
+        self.results = list(results)
+        self.calls = 0
+
+    def __call__(self, lat, lon, now, client):
+        self.calls += 1
+        return self.results[min(self.calls - 1, len(self.results) - 1)]
+
+
+class _RecordingSleep:
+    """A fake sleep that records its waits instead of blocking, so a test proves the
+    backoff schedule without any real delay."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, seconds):
+        self.calls.append(seconds)
+
+
+def test_weather_cache_success_first_attempt_no_sleep_and_stores(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    good = _wdata()
+    stub = _WeatherStub([good])
+    monkeypatch.setattr(loop.weather, "fetch_weather", stub)
+    sleep = _RecordingSleep()
+    cache = loop.WeatherCache(sleep=sleep)
+
+    result = cache.fetch(cfg, NOW, client=None)
+    assert result is good
+    assert stub.calls == 1
+    assert sleep.calls == []  # no retry, so no backoff
+
+    # The reading is stored: a later all-failing cycle (same NOW, within the hold)
+    # returns it rather than a Failure.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([Failure("down")]))
+    held = cache.fetch(cfg, NOW, client=None)
+    assert held is good
+
+
+def test_weather_cache_failure_then_success_sleeps_in_order(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    good = _wdata(9)
+    stub = _WeatherStub([Failure("503"), Failure("503"), good])
+    monkeypatch.setattr(loop.weather, "fetch_weather", stub)
+    sleep = _RecordingSleep()
+    cache = loop.WeatherCache(sleep=sleep)
+
+    result = cache.fetch(cfg, NOW, client=None)
+    assert result is good
+    assert stub.calls == 3
+    assert sleep.calls == [5, 10]  # backoff before each retry, up to the winner
+
+
+def test_weather_cache_always_failing_hits_the_hard_cap(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    stub = _WeatherStub([Failure("down")])
+    monkeypatch.setattr(loop.weather, "fetch_weather", stub)
+    sleep = _RecordingSleep()
+    cache = loop.WeatherCache(sleep=sleep)
+
+    result = cache.fetch(cfg, NOW, client=None)
+    assert isinstance(result, Failure)
+    assert stub.calls == 4  # one initial + three retries, never more
+    assert sleep.calls == [5, 10, 15]  # the whole schedule, then it stops
+
+
+def test_weather_cache_holds_a_reading_younger_than_the_window(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    good = _wdata()
+    # First cycle succeeds and stores the reading at NOW.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([good]))
+    cache = loop.WeatherCache(sleep=_RecordingSleep())
+    cache.fetch(cfg, NOW, client=None)
+
+    # A fully-failing cycle 29 minutes later still shows the held reading.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([Failure("down")]))
+    result = cache.fetch(cfg, NOW + timedelta(minutes=29), client=None)
+    assert result is good  # a normal WeatherData, so the region renders as usual
+
+
+def test_weather_cache_drops_a_reading_older_than_the_window(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    good = _wdata()
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([good]))
+    cache = loop.WeatherCache(sleep=_RecordingSleep())
+    cache.fetch(cfg, NOW, client=None)
+
+    # 31 minutes later, past WEATHER_HOLD → fall back to Failure (→ "niedostępne").
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([Failure("down")]))
+    result = cache.fetch(cfg, NOW + timedelta(minutes=31), client=None)
+    assert isinstance(result, Failure)
+
+
+def test_weather_cache_cold_start_nothing_held_is_a_failure(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([Failure("down")]))
+    cache = loop.WeatherCache(sleep=_RecordingSleep())
+
+    # Never a success, so nothing to hold (a restart mid-outage looks like this).
+    result = cache.fetch(cfg, NOW, client=None)
+    assert isinstance(result, Failure)
+
+
+def test_weather_cache_hold_age_is_measured_from_the_last_success(tmp_path, monkeypatch):
+    cfg = _config(tmp_path)
+    first, refreshed = _wdata(12), _wdata(14)
+    # Success at NOW, then a fresh success 20 minutes later — the timestamp advances.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([first]))
+    cache = loop.WeatherCache(sleep=_RecordingSleep())
+    cache.fetch(cfg, NOW, client=None)
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([refreshed]))
+    cache.fetch(cfg, NOW + timedelta(minutes=20), client=None)
+
+    # 29 minutes after the refresh (49 after the first success) it is still held —
+    # proving the window runs from the last success, not the first.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([Failure("down")]))
+    result = cache.fetch(cfg, NOW + timedelta(minutes=49), client=None)
+    assert result is refreshed
+
+
+def test_weather_hold_does_not_leak_to_bus_or_calendar(tmp_path, monkeypatch):
+    # A cycle where weather holds a last-good reading must still show a failing bus
+    # or calendar as "niedostępne" — the weather resilience is weather-only.
+    cfg = _config(tmp_path)
+    good = _wdata()
+    sleep = _RecordingSleep()
+    cache = loop.WeatherCache(sleep=sleep)
+    # Seed the hold with one success.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([good]))
+    cache.fetch(cfg, NOW, client=None)
+
+    # Now weather fails (held reading is used) while bus fails outright.
+    monkeypatch.setattr(loop.weather, "fetch_weather", _WeatherStub([Failure("down")]))
+    monkeypatch.setattr(loop, "_fetch_bus", lambda cfg, now, deps: Failure("bus: timeout"))
+    monkeypatch.setattr(loop, "_fetch_calendar", _calendar_ok)
+    deps = loop.Deps(http=None, creds=object(), stop_ids=[1767], weather=cache)
+    result = loop.build_once(cfg, NOW, deps)
+
+    assert result.published is True
+    assert not isinstance(result.sources.weather, Failure)  # held, drawn normally
+    assert isinstance(result.sources.bus, Failure)  # bus still blanks immediately
+    assert not isinstance(result.sources.calendar, Failure)
+    assert sleep.calls == [5, 10, 15]  # the failing weather cycle used the fake sleep
+
+
+def test_weather_cache_default_sleep_is_the_module_sleep():
+    # Belt and braces on "no test performs a real sleep": every test above injects a
+    # recording sleep, and in production the default wires to the module sleep — so a
+    # test that forgot to inject one would block, not silently pass on a stub.
+    assert loop.WeatherCache()._sleep is loop._time.sleep

@@ -19,13 +19,13 @@ over HTTP. Owner render changes this session (diacritics, hourly icons, less-ver
 realtime/scheduled bus labels, vehicle numbers) and 3.9-compat fixes for the Pi (tomli,
 zip(strict), fromisoformat "Z"). Docker removed — tests run in the Mac's local `.venv`
 (`.venv/bin/python -m pytest -q`): 175 green on 3.13, 161 on the Pi 3.9.
-**Last updated:** 2026-09-06
-This session: reviewed T11 (clean, no fix) and planned T12 (weather-source resilience), an
-owner-added enhancement. T12 holds the last good weather for ~30 min across a brief outage with
-in-cycle 5/10/15s retries; weather only, buses/calendar unchanged. Like T10/T11 it rides the
-build/review alternation with no separate plan-review. Also found: the moon icons are NOT yet
-deployed to the Pi — the live service still runs pre-T11 code (`deploy/deploy.sh pi@<ip>` pending).
-**Next `pir-work` will:** implement T12 (the next ⬜; deps T05, T08 both ✅).
+**Last updated:** 2026-09-07
+This session: implemented T12 (weather-source resilience). `WeatherCache` in loop.py holds the
+last good weather ≤30 min across an outage with 5/10/15s in-cycle retries; weather only, core and
+render/goldens untouched. 216 green on the Mac (quiet, no real sleep) and green on the Pi 3.9.
+Still pending: T11 (moon icons) not yet deployed to the Pi — the live service runs pre-T11 code
+(`deploy/deploy.sh pi@<ip>`), and neither T11 nor T12 is on the box yet.
+**Next `pir-work` will:** review T12 (the 🔍).
 
 ## Tasks
 
@@ -46,12 +46,12 @@ done · ⛔ blocked, needs a human.
 | T09 | Deploy on home box + on-device verification | T08 | ✅ | Deployed native on a Raspberry Pi (ARMv6, Raspbian 11, Python 3.9) via `deploy/deploy.sh`; systemd `trmnl-dashboard` active + enabled, serves `:8080`. On-device verified by owner 2026-09-06 (FINDINGS): device shows the board, cadence good (`refresh_rate=120`), reboot recovers. Docker dropped (NAS/Pi have none). |
 | T10 | Bus manufacturer + model before the fleet number | T03,T06,T08 | ✅ | Reviewed clean. Make/model before fleet number; on-device verified by owner 2026-09-06 (FINDINGS). |
 | T11 | Moon icons at night (day/night-aware weather icons) | T02,T03,T05 | ✅ | Reviewed clean, no fix. Day/night decision pure-core, renderer holds no clock; `is_day` lenient (null/absent/short array → day); field-order insert safe (all keyword construction). Night golden eyeballed — crescent + moon-behind-cloud read clearly at strip size. Pi 3.9 re-run in scratch dir → 191 green. On-device after-dark half (moon reads as moon on real e-ink) still unverified. Not yet deployed. |
-| T12 | Weather-source resilience: hold last-good ~30 min + in-cycle retries | T05,T08 | ⬜ | Owner-added 2026-09-07. `WeatherCache` in loop.py (mirrors VehicleCache, in-memory): retry weather fetch 5/10/15s (4 attempts, finite hard cap), then hold last success ≤30 min drawn as fresh, else niedostępne. Weather only. Core untouched; age check takes `now`. No render/golden change. |
+| T12 | Weather-source resilience: hold last-good ~30 min + in-cycle retries | T05,T08 | 🔍 | Built. `WeatherCache` in loop.py (in-memory, injected sleep) retries `weather.fetch_weather` 5/10/15s (4-attempt hard cap), then holds last success ≤30 min (age from `now` arg) drawn as normal WeatherData, else Failure. Wired into `Deps.weather` + `_fetch_weather` (None keeps old path) and main. No deviations from the doc. Core/render/goldens untouched. 9 new tests; 216 green Mac, green Pi 3.9. |
 
-**Review queue:** empty (nothing awaiting review). Next work is implementing T12 (⬜). Open threads:
-T11's on-device after-dark check (strip shows moons after sunset, crescent reads as a moon on real
-e-ink) folds into the next after-dark glance; and T11 is not yet deployed to the Pi
-(`deploy/deploy.sh pi@192.168.0.185`), so the device still runs pre-T11 code.
+**Review queue:** T12 (🔍, awaiting review). Open threads: T11's on-device after-dark check (strip
+shows moons after sunset, crescent reads as a moon on real e-ink) folds into the next after-dark
+glance; and neither T11 nor T12 is deployed to the Pi yet (`deploy/deploy.sh pi@192.168.0.185`), so
+the device still runs pre-T11 code.
 
 ## Blocked on the user
 
