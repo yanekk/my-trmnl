@@ -19,6 +19,7 @@ Legend: 🐞 defect found · ✅ verified by hand with the user · 📌 worth kn
 
 | Date | | Finding |
 |---|---|---|
+| 2026-09-07 | ✅ | Device sat on the boot logo though it fetched every image: FW 1.5.12's BMP loader rejects a 1-bit palette whose reserved byte ≠ 0 ("Color scheme demaged", parse result 3, no paint). Pillow emits `FF,FF,FF,FF`; `save_bmp` now writes `FF,FF,FF,00`. Serial-verified painting on device (parse result 0). |
 | 2026-09-06 | 📌 | T11 review clean, no fix. Pi 3.9 re-run in a fresh scratch dir (`~/trmnl-t11-test`, live service untouched) confirmed 191 green — the diff has nothing 3.9-specific. `is_day` field inserted before `hourly` in `WeatherData`; safe only because every construction is keyword. After-dark on-device still unverified. |
 | 2026-09-06 | 📌 | T11 built: `is_day` added to the Open-Meteo fetch → `WeatherData`/`HourPoint` bools; core `_icon_for(code,is_day)` picks moon/part-cloud-night after dark, else unchanged. Moon glyph drawn filled (an outline crescent is unreadable at r=20). 207 Mac / 191 Pi 3.9. After-dark on device unverified. |
 | 2026-09-06 | 📌 | T11 probe: Open-Meteo returns `is_day` (1 day / 0 night) for both `current` and `hourly` when the request asks for it; the hourly value flips across sunrise. Confirmed live on the Mac. So night icons need only add `is_day` to the fetch — no new source. Null → treat as day. |
