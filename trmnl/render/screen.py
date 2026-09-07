@@ -526,8 +526,6 @@ def _render_day(
         if y + row_h > bottom and remaining > 0:
             draw.text((x0, y), f"+{remaining} więcej", font=_font(_SANS, 15), fill=BLACK, anchor="lt")
             return
-        if idx > 0:
-            _dotted_hline(draw, x0, x1, y - 4)
         if ev.all_day:
             _allday_badge(draw, x0, y, x1, ev.title, title_f)
         else:
@@ -560,14 +558,6 @@ def _allday_badge(
 
 
 # --- shared -----------------------------------------------------------------
-
-
-def _dotted_hline(draw: ImageDraw.ImageDraw, x0: int, x1: int, y: int, gap: int = 4) -> None:
-    """A dotted rule between rows, matching the mock's dotted separators."""
-    x = x0
-    while x < x1:
-        draw.point((x, y), fill=BLACK)
-        x += gap
 
 
 def _dividers(draw: ImageDraw.ImageDraw) -> None:
