@@ -26,6 +26,7 @@ does not carry, so they are not drawn here (see PROGRESS T03 note).
 
 from __future__ import annotations
 
+import io
 import os
 from dataclasses import dataclass
 from datetime import timedelta
@@ -605,13 +606,47 @@ def render_startup() -> Image.Image:
     return img
 
 
+# The 8 colour-table bytes the TRMNL firmware demands for a 1-bit BMP: black
+# (00 00 00 00) then white (FF FF FF 00). The firmware's loader
+# (lib/trmnl/src/bmp.cpp, FW 1.5.12) accepts only this "standart" table or its
+# exact reverse; ANY other value in a reserved (4th) byte is rejected as "Color
+# scheme demaged" and the image is silently dropped — the device keeps its boot
+# logo and never shows the dashboard. Pillow writes the white entry's reserved
+# byte as 0xFF, which the firmware rejects, so we rewrite the table to these
+# exact bytes. Verified over serial on the real device 2026-09-07: 0xFF -> parse
+# result 3 (no paint); 0x00 -> "Color scheme standart" and the dashboard paints.
+_FW_PALETTE = bytes((0, 0, 0, 0, 255, 255, 255, 0))
+
+
+def _with_firmware_palette(data: bytes) -> bytes:
+    """Return `data` (a 1-bit BMP Pillow just wrote) with its 2-entry colour
+    table replaced by `_FW_PALETTE`. The table sits right after the 14-byte file
+    header and the DIB header, whose length is stored at bytes 14..17 (54 for the
+    40-byte BITMAPINFOHEADER Pillow emits). Pillow always orders the table
+    black-then-white, so overwriting only the reserved bytes preserves the pixel
+    mapping; we write the whole 8 bytes for clarity. No-op if this is somehow not
+    a 1-bpp 2-colour BMP."""
+    if data[28:30] != b"\x01\x00":  # bitsPerPixel (LE uint16) must be 1
+        return data
+    palette_start = 14 + int.from_bytes(data[14:18], "little")
+    buf = bytearray(data)
+    buf[palette_start : palette_start + 8] = _FW_PALETTE
+    return bytes(buf)
+
+
 def save_bmp(image: Image.Image, path: str) -> None:
-    """Write a 1-bit BMP3 to `path`, atomically. The image is written to a sibling
-    temp file and os.replace'd over the target, so a device fetch mid-write never
-    sees a partial file (DESIGN §2.6, §3.5). os.replace is atomic on the same
-    filesystem, which the temp sibling guarantees."""
+    """Write a 1-bit BMP3 to `path`, atomically, with the firmware-accepted
+    colour table (see `_with_firmware_palette`). The bytes are built in memory,
+    then written to a sibling temp file and os.replace'd over the target, so a
+    device fetch mid-write never sees a partial file (DESIGN §2.6, §3.5).
+    os.replace is atomic on the same filesystem, which the temp sibling
+    guarantees."""
     if image.mode != "1":
         image = image.convert("1")
+    buf = io.BytesIO()
+    image.save(buf, format="BMP")
+    data = _with_firmware_palette(buf.getvalue())
     tmp = f"{path}.tmp"
-    image.save(tmp, format="BMP")
+    with open(tmp, "wb") as f:
+        f.write(data)
     os.replace(tmp, path)

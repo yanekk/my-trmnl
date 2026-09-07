@@ -287,6 +287,28 @@ def test_save_bmp_writes_1bit_bmp(tmp_path):
     assert reopened.size == (800, 480)
 
 
+def test_save_bmp_palette_is_firmware_accepted(tmp_path):
+    """The TRMNL firmware rejects a 1-bit BMP whose colour table is not exactly
+    black 00,00,00,00 then white FF,FF,FF,00 ("Color scheme demaged", no paint —
+    verified on device FW 1.5.12 2026-09-07). Pillow writes the white entry's
+    reserved byte as 0xFF; save_bmp must rewrite it to 0x00."""
+    out = tmp_path / "screen.bmp"
+    screen.save_bmp(screen.render(_dashboard()), str(out))
+    data = out.read_bytes()
+    palette_start = 14 + int.from_bytes(data[14:18], "little")  # 54 for a 40-byte DIB
+    assert data[palette_start : palette_start + 8] == bytes((0, 0, 0, 0, 255, 255, 255, 0))
+
+
+def test_committed_startup_bmp_palette_is_firmware_accepted():
+    """The committed cold-start placeholder is served verbatim (never re-saved),
+    so its palette must already satisfy the firmware. Regenerate with the command
+    in test_committed_startup_bmp_is_1bit_800x480 if this fails."""
+    path = os.path.join(os.path.dirname(screen.__file__), "startup.bmp")
+    data = open(path, "rb").read()
+    palette_start = 14 + int.from_bytes(data[14:18], "little")
+    assert data[palette_start : palette_start + 8] == bytes((0, 0, 0, 0, 255, 255, 255, 0))
+
+
 def test_save_bmp_uses_temp_then_rename(tmp_path, monkeypatch):
     """The target is never written directly: a .tmp sibling is os.replace'd over
     it, so a concurrent fetch never sees a partial file (DESIGN §2.6, §3.5)."""
